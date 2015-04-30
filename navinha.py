@@ -14,7 +14,6 @@ graphwidth = 640
 graphheight = 480
 DISPLAYSURF = pygame.display.set_mode((graphwidth, graphheight))
 DISPLAYSURF2 = pygame.display.set_mode((graphwidth, graphheight))
-pygame.mouse.set_visible(0)
 pygame.display.set_caption("PEW PEW!")
 
 #set up sound
@@ -54,7 +53,7 @@ whipImg = pygame.image.load('whip.png')
 ex1 = pygame.image.load('explosion1.png')
 ex2 = pygame.image.load('explosion2.png')
 ex3 = pygame.image.load('explosion3.png')
-ex4 = pygame.image.load('explosion4.png')
+ex4 = pygame.image.load('explosion4.png')#All explosion frames
 ex5 = pygame.image.load('explosion5.png')
 ex6 = pygame.image.load('explosion6.png')
 ex7 = pygame.image.load('explosion7.png')
@@ -67,7 +66,7 @@ ex13 = pygame.image.load('explosion13.png')
 ex14 = pygame.image.load('explosion14.png')
 
 #set up classes
-class shot(pygame.sprite.Sprite): #creates shot as a class, which ships will use with their methods
+class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will create with their methods
     def __init__(self,x,y,spd,dmg,type,sprite,team):
         pygame.sprite.Sprite.__init__(self)
         self.spd = spd
@@ -84,35 +83,34 @@ class shot(pygame.sprite.Sprite): #creates shot as a class, which ships will use
         else:
             player_shots.add(self)
         shot_snd.play()
-    def move(self): #defines how the shots will move, so ships can call them at will
+    def move(self): #defines how each type of shots will move, each ship has a different type.
         if self.type == 'simple':
             self.rect.y += self.spd
-        elif self.type == 'curved':
+        elif self.type == 'curved':#Sine-like movement
             self.rect.y += self.spd
             self.rect.x += self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont)
             self.cont += 0.2
-        elif self.type == 'whip':
+        elif self.type == 'whip':#Circular movement
             self.rect.y += self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5
             self.rect.x += self.spd*sin(self.cont) - self.spd*cos(self.cont)
             self.cont += 0.1
-        elif self.type == 'boss':
+        elif self.type == 'boss':#Explosive sort of shot
             self.rect.y += self.spd
-            if self.rect.y > 320:
+            if self.rect.y > 320: #When it has travelled enough, explodes into 8 more different shots
                 pi = 3.14159265359
                 cont = 0
                 for i in range(1,9):
-                    spd = self.spd * cos(cont)
-                    spdy = self.spd * sin(cont)
+                    spd = self.spd * cos(cont)#Each shot speed is controlled by a factor of sine and cosine
+                    spdy = self.spd * sin(cont)#so that they move diagonally with the correct speed, as to mimic a circle.
                     instance = shot(self.rect.x,self.rect.y,spd,2/dif,'radial',radial_shot,'red')
                     instance.spdy = spdy
                     cont += pi/4
-                self.kill()
+                self.kill()#.kill() is a method that comes with the inheritance from pygame.sprite.Sprite, it completely deletes the object
         elif self.type == 'radial':
             self.rect.y += self.spdy
             self.rect.x += self.spd
     
-class ship(pygame.sprite.Sprite): #sets up the class ship, which is the main class that has movement.
-    cont = 0 #controls direction
+class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main class that represents all space-ships in the game.
     state = 'hunting'
     def __init__(self,x,y,hp,spd,shotspd,shotdmg,shottype,delay,sprite,spriteshot,team):
         pygame.sprite.Sprite.__init__(self)
@@ -121,28 +119,31 @@ class ship(pygame.sprite.Sprite): #sets up the class ship, which is the main cla
         self.rect.x = x
         self.rect.y = y
         self.hp = hp
+        #variables that control the movement
         self.spd = 0
         self.maxspd = spd
         self.accel = spd/5
+        #variables that store the shot information
         self.shotspd = shotspd
         self.shotdmg = shotdmg
         self.shottype = shottype
         self.delay = delay
         self.spriteshot = spriteshot
         self.maxdelay = delay
+        #team is used to discern whether the object is an enemy or not
         self.team = team
         if self.team == 'red':
             enemy_list.add(self)
         else:
             player_list.add(self)
 
-    def shoot(self): #creates an object using the class shot, using the definitions on how to call it that were given to it on start
+    def shoot(self): #creates an shot object based on the ship's current position and which one is it
         if self.team == 'red':
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
         else:
             instance = shot(self.rect.x+(0.7*(self.rect.width/2)),self.rect.y-(self.rect.height/2),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
         
-    def aimov(self): #uses states as the mean of choosing how the ships will move
+    def aimov(self): #uses states as the mean of choosing how the AI ships will move
         if self.state == "hunting": #follows the player
             if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 \
                and self.spd <= self.maxspd:
@@ -152,20 +153,20 @@ class ship(pygame.sprite.Sprite): #sets up the class ship, which is the main cla
                 self.spd -= self.accel
                 
         if self.state == "fleeing": #runs from the player
-            if self.rect.centerx not in range(0,graphwidth): #when ship reaches screen edges, go back to hunting
+            if self.rect.centerx not in range(0,graphwidth): #when ship reaches either of the screen edges, go back to hunting
                 self.state = "hunting"
                 return
             if player.rect.centerx > self.rect.centerx \
                and self.rect.centerx in range(0,graphwidth)\
-               and self.spd > -self.maxspd:
+               and self.spd > -self.maxspd:#if the player is to the right of the ship, move towards the left
                 self.spd -= self.accel
             elif player.rect.centerx < self.rect.centerx \
                and self.rect.centerx in range(0,graphwidth)\
-               and self.spd < self.maxspd:
+               and self.spd < self.maxspd:#if its left, move right
                 self.spd += self.accel
         self.rect.x += self.spd
             
-    def aishoot(self): #the method which is used for calling the shots, and only if it's an member of the AI team
+    def aishoot(self): #the method which is used for controlling shot spawns, and only if it's an member of the AI team
         if self.team == "red":
             self.delay -= 1
         if self.delay <= 0:
@@ -174,19 +175,19 @@ class ship(pygame.sprite.Sprite): #sets up the class ship, which is the main cla
     def explode(self): #method called when the ship dies, which plays the sound and creates an object explosion, where the ship was
         exploding_snd.play()
         self.exploding = True
-        instance = explos(self.rect.x-self.rect.width,self.rect.y-self.rect.height,ex1)
+        instance = explos(self.rect.x-self.rect.width,self.rect.y-self.rect.height)
         self.kill()
         return
 
-class boss(ship): #creates a special instance of the 
+class boss(ship): #boss has some different patterns, so we created a new object that inherits all the basics from the 'ship' object
     def explode(self): #calls 3 explosions, instead of one
         boss_is_dead_snd.play()
-        instance = explos(self.rect.x,self.rect.y,ex1)
-        instance = explos(self.rect.x+self.rect.width/2,self.rect.y,ex1)
-        instance = explos(self.rect.x+self.rect.width,self.rect.y,ex1)
+        instance = explos(self.rect.x,self.rect.y)
+        instance = explos(self.rect.x+self.rect.width/2,self.rect.y)
+        instance = explos(self.rect.x+self.rect.width,self.rect.y)
         self.kill()
     def aimov(self): #changes the movement for the boss, so that it can spawn in the middle
-        if self.rect.centery < self.rect.height+5:
+        if self.rect.centery < self.rect.height+5:#Also never flees. The boss doesn't mind taking some shots
             self.rect.centery += self.accel
         if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 and self.spd <= self.maxspd/2:
             self.spd += self.accel
@@ -195,7 +196,7 @@ class boss(ship): #creates a special instance of the
            self.spd -= self.accel
            self.rect.x += self.spd/4
         self.rect.x += self.spd
-    def shoot(self): #works in a way so that the hp affects the number of shots.
+    def shoot(self): #works in a way so that the hp affects how the boss attacks.
         if self.hp <= 300:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
         if self.hp <= 220:
@@ -204,19 +205,19 @@ class boss(ship): #creates a special instance of the
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'curved',curvedshotImg,self.team)
         if self.hp <= 120:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'whip',whipImg,self.team)
-class explos(pygame.sprite.Sprite): #the class which one calls when something dies, creating an explosion where what died was
+class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is below 0, creating an explosion where it was
     explode_frame = 0
-    explodeimg = [ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14]
-    def __init__(self,x,y,sprite):
+    explodeimg = [ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14]#List containing all sprites for the explosion
+    def __init__(self,x,y,sprite=ex1):
         pygame.sprite.Sprite.__init__(self)
         self.image = sprite
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         explosions.add(self)
-    def cycle(self):
+    def cycle(self):#Everytime this method is called, it changes the current sprite to the next until its at the last one
         if self.explode_frame == len(self.explodeimg):
-            self.kill()
+            self.kill()#Then it deletes the whole object.
             return
         self.image = self.explodeimg[self.explode_frame]
         self.explode_frame += 1
@@ -225,20 +226,22 @@ class explos(pygame.sprite.Sprite): #the class which one calls when something di
 mousex = 0
 mousey = 0
 mouseClicked = False #Player variables
-delay = 0
+player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
+player_rof = 15 #rate of fire, how many frames has to pass until the next shot is fired
 game_finish = 0
 time_game_finished = 0
 
+#groups that will contain every object in the game
 enemy_list = pygame.sprite.Group()
 player_list = pygame.sprite.Group()
 enemy_shots = pygame.sprite.Group()
 player_shots = pygame.sprite.Group()
 explosions = pygame.sprite.Group()
 
-dif = 0
-kills = 0
-score = Score()
-font = pygame.font.SysFont('impact', 50, False, False)
+dif = 0 #Difficulty
+kills = 0 #kills, used for the purpose of scoring
+score = Score() #Score object, explained in detail at score.py
+font = pygame.font.SysFont('impact', 50, False, False) #prepares a font according to pygame syntax
 
     #          x,y,hp,spd,shotspd,shotdmg,shottype,delay,sprite,spriteshot,team
 player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
@@ -252,15 +255,14 @@ def draw(): #calls the surface drawing functions, and updates the screen
     drawshots()
     drawexplosions()
     drawhp()
-    spawn()
     pygame.display.update()
     fpsClock.tick(FPS)
     
 def drawhp(): #draws the hp bar for the boss and the player
     if boss_spawned == True \
-       and (boss.rect.x >= -boss.rect.width/2 \
-            and boss.rect.x <= graphwidth-boss.rect.width/2):
-        pygame.draw.rect(DISPLAYSURF, RED,(0,0,((graphwidth*boss.hp)/300),5))#boss                                      
+        and (bigboss.rect.x >= -bigboss.rect.width/2 \
+        and bigboss.rect.x <= graphwidth-bigboss.rect.width/2):
+        pygame.draw.rect(DISPLAYSURF, RED,(0,0,((graphwidth*bigboss.hp)/300),5))#boss                                      
     pygame.draw.rect(DISPLAYSURF, GREEN, (0,graphheight-5,(graphwidth*player.hp)/100,graphheight)) #player
 
 def drawships(shipt): #draws all the different ships in a given list
@@ -271,25 +273,23 @@ def drawshots():  #draws all the shots and checks collision
     for shot in enemy_shots:
         shot.move()
         DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
-        if shot.rect.centery <= 0 or shot.rect.centery >= graphheight \
-           or shot.rect.centerx <= 0 or shot.rect.centerx >= graphwidth: #shot collision checking with the player
+        if shot.rect.centery not in range(0,graphheight)\
+           or shot.rect.centerx not in range(0,graphwidth): 
             enemy_shots.remove(shot)
             shot.kill()
             continue
         for ship in player_list:
             if shot.rect.centery in range(ship.rect.top,ship.rect.bottom) \
-            and shot.rect.centerx in range(ship.rect.left,ship.rect.right):
+            and shot.rect.centerx in range(ship.rect.left,ship.rect.right): #shot collision checking with the player
                 ship.hp -= shot.dmg
-                #enemy_shots.remove(shot)
                 take_dmg_snd.play()
                 shot.kill()
         
     for shot in player_shots:
         shot.move()
         DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
-        if shot.rect.centery <= 0 or shot.rect.centery >= graphheight \
-           or shot.rect.centerx <= 0 or shot.rect.centerx >= graphwidth: #shot collision checking with the enemies
-            enemy_shots.remove(shot)
+        if shot.rect.centery not in range(0,graphheight)\
+           or shot.rect.centerx not in range(0,graphwidth): #shot collision checking with the enemies
             shot.kill()
             continue
         for ship in enemy_list:
@@ -306,7 +306,7 @@ def drawexplosions(): #draws all the explosions
 def spawn(): #controls where and when will the enemies appear
     time = pygame.time.get_ticks() + 30 #gets time after pygame.init was called, in ms
     global boss_spawned
-    global boss
+    global bigboss #bigboss has to be global so that bigboss.hp and .x/.y may be checked along the code
     if (time - time_game_begun) % (1000 + (1000*dif)) < 17 and boss_spawned == False: #before the boss has spawned, spawn random mobs, from either left or right
         if randint(-1,1) == 1:
             spawnrand = randint(0,2)
@@ -328,9 +328,9 @@ def spawn(): #controls where and when will the enemies appear
     if (time - time_game_begun) > 30000 and boss_spawned == False: #if a certain time has passed and the boss has not appeared, make him appear
         boss_spawned = True
         if randint(0,1) == 1:
-            boss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
+            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
         else:
-            boss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
+            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
 
 def inprint(inputs,scoreint): #ui for high-score name input
     global namestr
@@ -339,7 +339,6 @@ def inprint(inputs,scoreint): #ui for high-score name input
     DISPLAYSURF2.blit(font.render(("Your score: " + str(scoreint)),True, WHITE),(graphwidth/2-(font.size(("Your score: " + str(scoreint)))[0])/2,(graphheight/2)-(font.size(("Your score: " + str(scoreint)))[1]/2)))
     DISPLAYSURF2.blit(font.render("Type your name: " + inputs,True, WHITE),(graphwidth/2-(font.size("Type your name: " + inputs)[0])/2,(graphheight/2)+(font.size("Type your name: " + inputs)[1])/2))
     pygame.display.update()
-    return
 
 def prnt(dicti): #ui for showing high-scores
     DISPLAYSURF2.fill(BLACK)
@@ -358,8 +357,8 @@ def prnt(dicti): #ui for showing high-scores
     pygame.display.update()
 
 def endgame(scoreint): #loop that holds what happens after either you or the boss died
-    name = []
-    namestr = ''
+    name = []#stores all the letters the user types, one by one.
+    namestr = ''#empty string, will store the final name as typed by the player.
     inprint(namestr, scoreint)
     while True:
         for event in pygame.event.get(): # event handling loop
@@ -376,8 +375,8 @@ def endgame(scoreint): #loop that holds what happens after either you or the bos
                 inprint(namestr,scoreint)
                 namestr = ''
                 if event.key == K_RETURN and len(name)>=0:
-                    for i in name: #chamar setscore e mostrar o highscore
-                        namestr += i
+                    for i in name: #calls setscore and shows the highscore
+                        namestr += i #concatenates every letter in name to a single string
                     score.setScore(namestr, scoreint)
                     prnt(score.getScore())
                     pygame.time.delay(3600)
@@ -484,7 +483,7 @@ while True:
     if player.hp <= 0 and game_finish == 0:
         game_finish = 1
         time_game_finished = pygame.time.get_ticks()
-    elif boss_spawned == True and boss.hp <= 0 and game_finish == 0:
+    elif boss_spawned == True and bigboss.hp <= 0 and game_finish == 0:
         game_finish = 1
         time_game_finished = pygame.time.get_ticks()
     for event in pygame.event.get(): # event handling loop
@@ -499,13 +498,15 @@ while True:
         elif event.type == MOUSEBUTTONDOWN:
             mousex, mousey = event.pos
             mouseClicked = True
-    if mouseClicked == True and delay <= 0 and player.hp > 0:
+    if mouseClicked == True and player_shot_delay <= 0 and player.hp > 0:
         player.shoot()
-        delay = 15
-    delay -= 1 #Player's shot delay
+        player_shot_delay = player_rof
+    player_shot_delay -= 1 
     player.rect.x = mousex-player.rect.width/2
     player.rect.y = mousey-player.rect.height/2 #Centers the mouse at player's ship
     draw()
+    if not boss_spawned:
+        spawn()
     for i in enemy_list:
         if i.hp < 1:
             kills += 1
