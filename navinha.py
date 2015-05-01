@@ -189,12 +189,12 @@ class boss(ship): #boss has some different patterns, so we created a new object 
         self.kill()
     def aimov(self): #changes the movement for the boss, so that it can spawn in the middle
         if self.rect.centery < self.rect.height+5:#Also never flees. The boss doesn't mind taking some shots
-            self.rect.centery += self.accel
+            self.rect.centery += self.accel*(dt/dtmod)
         if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 and self.spd <= self.maxspd/2:
-            self.spd += self.accel
+            self.spd += self.accel*(dt/dtmod)
             self.rect.x += self.spd/4
         elif player.rect.centerx < self.rect.centerx-(self.maxspd+self.rect.width/4) and self.spd > -self.maxspd/2:
-           self.spd -= self.accel
+           self.spd -= self.accel*(dt/dtmod)
            self.rect.x += self.spd/4
         self.rect.x += self.spd
     def shoot(self): #works in a way so that the hp affects how the boss attacks.
