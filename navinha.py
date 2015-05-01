@@ -183,7 +183,6 @@ class boss(ship): #boss has some different patterns, so we created a new object 
     def explode(self): #calls 3 explosions, instead of one
         global boss_spawned
         boss_is_dead_snd.play()
-        boss_spawned = False
         instance = explos(self.rect.x,self.rect.y)
         instance = explos(self.rect.x+self.rect.width/2,self.rect.y)
         instance = explos(self.rect.x+self.rect.width,self.rect.y)
@@ -207,6 +206,7 @@ class boss(ship): #boss has some different patterns, so we created a new object 
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'curved',curvedshotImg,self.team)
         if self.hp <= 120:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'whip',whipImg,self.team)
+            
 class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is below 0, creating an explosion where it was
     explode_frame = 0
     explodeimg = [ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14]#List containing all sprites for the explosion
@@ -249,8 +249,6 @@ kills = 0 #kills, used for the purpose of scoring
 score = Score() #Score object, explained in detail at score.py
 font = pygame.font.SysFont('impact', 50, False, False) #prepares a font according to pygame syntax
 
-    #          x,y,hp,spd,shotspd,shotdmg,shottype,delay,sprite,spriteshot,team
-player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
 boss_spawned = False
 
 #draw
@@ -305,7 +303,7 @@ def drawshots():  #draws all the shots and checks collision
                 ship.state = "fleeing"
                 shot.kill()
 
-def cleargroup(group):
+def cleargroup(group): #cleaning 
     for i in group:
         for j in i:
             j.kill()
@@ -371,6 +369,10 @@ def endgame(scoreint): #loop that holds what happens after either you or the bos
     name = []#stores all the letters the user types, one by one.
     namestr = ''#empty string, will store the final name as typed by the player.
     inprint(namestr, scoreint)
+    if gamemode == "arcade":
+        scorefile = "Scores.txt"
+    elif gamemode == "survival":
+        scorefile = "SurScores.txt"
     while True:
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
@@ -388,11 +390,11 @@ def endgame(scoreint): #loop that holds what happens after either you or the bos
                 if event.key == K_RETURN and len(name)>=0:
                     for i in name: #calls setscore and shows the highscore
                         namestr += i #concatenates every letter in name to a single string
-                    score.setScore(namestr, scoreint)
-                    prnt(score.getScore())
+                    score.setScore(namestr, scoreint, scorefile)
+                    prnt(score.getScore(scorefile))
                     pygame.time.delay(3600)
                     ost_snd.fadeout(1000)
-                    menu()
+                    return
                     
 def choosedif(): #ui for choosing difficulty 
     global dif
@@ -479,8 +481,10 @@ def choosemode(): #ui for choosing mode
             return
         
 def scoreint(): #defines how the score is calculated
-    return ((player.hp*100000/(time_game_finished-time_game_begun)+(kills*100))/dif)
-
+    if gamemode == "arcade":
+        return ((player.hp*100000/(time_game_finished-time_game_begun)+(kills*100))/dif)
+    elif gamemode == "survival":
+        return (time_game_finished-time_game_begun)/1000
 def menu(): #main menu
     pygame.mouse.set_visible(1)
     endgame_snd.play()
@@ -534,6 +538,9 @@ def play():
 
     global kills
     global boss_spawned
+    
+    player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
+    
     player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
     player_rof = 15 #rate of fire, how many frames has to pass until the next shot is fired
     player.hp = 100
@@ -547,12 +554,15 @@ def play():
         if time_game_finished != 0:  
             if pygame.time.get_ticks() - time_game_finished > 2000:
                 endgame(scoreint())
+                return
         if player.hp <= 0 and game_finish == 0:
             game_finish = 1
             time_game_finished = pygame.time.get_ticks()
         elif boss_spawned == True and bigboss.hp <= 0 and game_finish == 0 and gamemode == 'arcade':
             game_finish = 1
             time_game_finished = pygame.time.get_ticks()
+        elif boss_spawned == True and bigboss.hp <= 0 and gamemode == 'survival':
+            boss_spawned = False
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 pygame.quit()
@@ -589,4 +599,5 @@ def play():
             explosion.cycle()
 
 #run the game loop
-menu()
+while True:
+    menu()
