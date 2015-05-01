@@ -181,7 +181,9 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
 
 class boss(ship): #boss has some different patterns, so we created a new object that inherits all the basics from the 'ship' object
     def explode(self): #calls 3 explosions, instead of one
+        global boss_spawned
         boss_is_dead_snd.play()
+        boss_spawned = False
         instance = explos(self.rect.x,self.rect.y)
         instance = explos(self.rect.x+self.rect.width/2,self.rect.y)
         instance = explos(self.rect.x+self.rect.width,self.rect.y)
@@ -223,12 +225,13 @@ class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is b
         self.explode_frame += 1
         
 #set up the variables
+#mouse variables
 mousex = 0
 mousey = 0
-mouseClicked = False #Player variables
-player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
-player_rof = 15 #rate of fire, how many frames has to pass until the next shot is fired
+mouseClicked = False
+#variables used to store time and game-state
 game_finish = 0
+time_game_begun = 0
 time_game_finished = 0
 
 #groups that will contain every object in the game
@@ -238,7 +241,10 @@ enemy_shots = pygame.sprite.Group()
 player_shots = pygame.sprite.Group()
 explosions = pygame.sprite.Group()
 
-dif = 0 #Difficulty
+everything = [enemy_list,player_shots,enemy_shots,explosions]
+
+gamemode = ''
+dif = 1 #Difficulty, hard by standard.
 kills = 0 #kills, used for the purpose of scoring
 score = Score() #Score object, explained in detail at score.py
 font = pygame.font.SysFont('impact', 50, False, False) #prepares a font according to pygame syntax
@@ -299,6 +305,11 @@ def drawshots():  #draws all the shots and checks collision
                 ship.state = "fleeing"
                 shot.kill()
 
+def cleargroup(group):
+    for i in group:
+        for j in i:
+            j.kill()
+
 def drawexplosions(): #draws all the explosions
     for explosion in explosions:
         DISPLAYSURF.blit(explosion.image, (explosion.rect.x, explosion.rect.y))
@@ -325,7 +336,7 @@ def spawn(): #controls where and when will the enemies appear
             elif spawnrand == 2:
                 mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whipImg,'red')
                 
-    if (time - time_game_begun) > 30000 and boss_spawned == False: #if a certain time has passed and the boss has not appeared, make him appear
+    if (time - time_game_begun) % 30000 <= 17 and boss_spawned == False: #if a certain time has passed and the boss has not appeared, make him appear
         boss_spawned = True
         if randint(0,1) == 1:
             bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
@@ -380,8 +391,8 @@ def endgame(scoreint): #loop that holds what happens after either you or the bos
                     score.setScore(namestr, scoreint)
                     prnt(score.getScore())
                     pygame.time.delay(3600)
-                    pygame.quit()
-                    sys.exit()
+                    ost_snd.fadeout(1000)
+                    menu()
                     
 def choosedif(): #ui for choosing difficulty 
     global dif
@@ -412,23 +423,64 @@ def choosedif(): #ui for choosing difficulty
            and mouseClicked == True:
             dif = 3
             mouseClicked = False
-            return False
+            play()
+            return
         if mousey in range(graphheight/2, graphheight/2 + font.size("Medium")[1]) \
            and mousex in range(graphwidth/2 - font.size("Medium")[0]/2,graphwidth/2 + font.size("Medium")[0]/2) \
            and mouseClicked == True:
             dif = 2
             mouseClicked = False
-            return False
+            play()
+            return
         if mousey in range(graphheight/2 + font.size("Hard")[1],graphheight/2 + font.size("Hard")[1]*2) \
            and mousex in range(graphwidth/2 - font.size("Hard")[0]/2, graphwidth/2 + font.size("Hard")[0]/2) \
            and mouseClicked == True:
             dif = 1
             mouseClicked = False
-            return False
+            play()
+            return
 
-def scoreint(): #defines how the score is calculated
-    return ((player.hp*100000/(pygame.time.get_ticks()))+(kills*100))/dif
+def choosemode(): #ui for choosing mode
+    global gamemode
+    global mousex
+    global mousey
+    pygame.mouse.set_visible(1)
+    DISPLAYSURF2.fill(BLACK)
+    mouseClicked = False
+    while True:
+        DISPLAYSURF2.blit(font.render("Arcade", True, WHITE),(graphwidth/2 - font.size("Arcade")[0]/2, graphheight/2 + font.size("Arcade")[1]))
+        DISPLAYSURF2.blit(font.render("Survival", True, WHITE),(graphwidth/2 - font.size("Survival")[0]/2, graphheight/2 - font.size("Survival")[1]))
+        pygame.display.update()
+        for event in pygame.event.get(): # event handling loop
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEMOTION:
+                mousex, mousey = event.pos
+            elif event.type == MOUSEBUTTONDOWN:
+                mousex, mousey = event.pos
+                mouseClicked = True
+            elif event.type == MOUSEBUTTONUP:
+                mousex, mousey = event.pos
+                mouseClicked = False
+        if mousey in range(graphheight/2 - font.size("Survival")[1],graphheight/2) \
+           and mousex in range(graphwidth/2 - font.size("Survival")[0]/2,graphwidth/2 + font.size("Survival")[0]/2) \
+           and mouseClicked == True:
+            gamemode = 'survival'
+            play()
+            mouseClicked = False
+            return
+        if mousey in range(graphheight/2 + font.size("Arcade")[1],graphheight/2 + font.size("Arcade")[1]*2) \
+           and mousex in range(graphwidth/2 - font.size("Arcade")[0]/2, graphwidth/2 + font.size("Arcade")[0]/2) \
+           and mouseClicked == True:
+            gamemode = 'arcade'
+            mouseClicked = False
+            choosedif()
+            return
         
+def scoreint(): #defines how the score is calculated
+    return ((player.hp*100000/(time_game_finished-time_game_begun)+(kills*100))/dif)
+
 def menu(): #main menu
     pygame.mouse.set_visible(1)
     endgame_snd.play()
@@ -436,86 +488,105 @@ def menu(): #main menu
     global mousex
     global mousey
     mouseClicked = False
-    if dif == 0:
-        while True:
-            DISPLAYSURF.fill(BLACK)
-            DISPLAYSURF2.blit(font.render("PEW! PEW!",True, WHITE),(graphwidth/2-(font.size("PEW! PEW!")[0])/2,(graphheight/2)-(font.size("PEW! PEW!")[1]*3)))
-            DISPLAYSURF2.blit(font.render("START",True, WHITE),(graphwidth/2-(font.size("START")[0])/2,(graphheight/2)+(font.size("START")[1])))
-            DISPLAYSURF2.blit(font.render("HIGHSCORES",True, WHITE),(graphwidth/2-(font.size("HIGHSCORES")[0])/2,(graphheight/2)+(font.size("HIGHSCORES")[1]*2)))
-            pygame.display.update()
-            for event in pygame.event.get(): # event handling loop
-                if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == MOUSEMOTION:
-                    mousex, mousey = event.pos
-                elif event.type == MOUSEBUTTONDOWN:
-                    mousex, mousey = event.pos
-                    mouseClicked = True
-                elif event.type == MOUSEBUTTONUP:
-                    mousex, mousey = event.pos
-                    mouseClicked = False
-            if mousey in range(((graphheight/2)+(font.size("START")[1])),(graphheight/2)+(font.size("START")[1]*2)) \
-               and mousex in range(graphwidth/2-(font.size("START")[0])/2,graphwidth/2+(font.size("START")[0])/2) \
-               and mouseClicked == True:
+    while True:
+        DISPLAYSURF.fill(BLACK)
+        DISPLAYSURF2.blit(font.render("PEW! PEW!",True, WHITE),(graphwidth/2-(font.size("PEW! PEW!")[0])/2,(graphheight/2)-(font.size("PEW! PEW!")[1]*3)))
+        DISPLAYSURF2.blit(font.render("START",True, WHITE),(graphwidth/2-(font.size("START")[0])/2,(graphheight/2)+(font.size("START")[1])))
+        DISPLAYSURF2.blit(font.render("HIGHSCORES",True, WHITE),(graphwidth/2-(font.size("HIGHSCORES")[0])/2,(graphheight/2)+(font.size("HIGHSCORES")[1]*2)))
+        pygame.display.update()
+        for event in pygame.event.get(): # event handling loop
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEMOTION:
+                mousex, mousey = event.pos
+            elif event.type == MOUSEBUTTONDOWN:
+                mousex, mousey = event.pos
+                mouseClicked = True
+            elif event.type == MOUSEBUTTONUP:
+                mousex, mousey = event.pos
                 mouseClicked = False
-                choosedif()
-                break
-            if mousey in range(((graphheight/2)+(font.size("HIGHSCORE")[1]*2)),(graphheight/2)+(font.size("HIGHSCORE")[1]*3)) \
-               and mousex in range(graphwidth/2-(font.size("HIGHSCORE")[0])/2,graphwidth/2+(font.size("HIGHSCORE")[0])/2) \
-               and mouseClicked == True:
-                prnt(score.getScore())
-                pygame.time.delay(3600)
-                mouseClicked = False
-                
-#run the game loop
-if dif == 0:
-    menu()
-endgame_snd.fadeout(1000)
-pygame.mouse.set_visible(0)
-ost_snd.play()
-time_game_begun = pygame.time.get_ticks()
-
-while True:
-    if time_game_finished != 0:  
-        if pygame.time.get_ticks() - time_game_finished > 2000:
-            endgame(scoreint())
-    if player.hp <= 0 and game_finish == 0:
-        game_finish = 1
-        time_game_finished = pygame.time.get_ticks()
-    elif boss_spawned == True and bigboss.hp <= 0 and game_finish == 0:
-        game_finish = 1
-        time_game_finished = pygame.time.get_ticks()
-    for event in pygame.event.get(): # event handling loop
-        if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-            pygame.quit()
-            sys.exit()
-        elif event.type == MOUSEMOTION:
-            mousex, mousey = event.pos
-        elif event.type == MOUSEBUTTONUP:
-            mousex, mousey = event.pos
+        if mousey in range(((graphheight/2)+(font.size("START")[1])),(graphheight/2)+(font.size("START")[1]*2)) \
+           and mousex in range(graphwidth/2-(font.size("START")[0])/2,graphwidth/2+(font.size("START")[0])/2) \
+           and mouseClicked == True:
             mouseClicked = False
-        elif event.type == MOUSEBUTTONDOWN:
-            mousex, mousey = event.pos
-            mouseClicked = True
-    if mouseClicked == True and player_shot_delay <= 0 and player.hp > 0:
-        player.shoot()
-        player_shot_delay = player_rof
-    player_shot_delay -= 1 
-    player.rect.x = mousex-player.rect.width/2
-    player.rect.y = mousey-player.rect.height/2 #Centers the mouse at player's ship
-    draw()
-    if not boss_spawned:
-        spawn()
-    for i in enemy_list:
-        if i.hp < 1:
-            kills += 1
-            i.explode()
-            continue
-        i.aishoot()
-        i.aimov()
-    for i in player_list:
-        if i.hp <= 0:
-            i.explode()
-    for explosion in explosions:
-        explosion.cycle()
+            choosemode()
+            return
+        if mousey in range(((graphheight/2)+(font.size("HIGHSCORE")[1]*2)),(graphheight/2)+(font.size("HIGHSCORE")[1]*3)) \
+           and mousex in range(graphwidth/2-(font.size("HIGHSCORE")[0])/2,graphwidth/2+(font.size("HIGHSCORE")[0])/2) \
+           and mouseClicked == True:
+            prnt(score.getScore())
+            pygame.time.delay(3600)
+            mouseClicked = False
+
+def play():
+    endgame_snd.fadeout(1000)
+    pygame.mouse.set_visible(0)
+    ost_snd.play()
+    global mousex
+    global mousey
+    global mouseClicked
+    global player
+
+    global game_finish
+    global time_game_finished
+    global time_game_begun
+
+    global kills
+    global boss_spawned
+    player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
+    player_rof = 15 #rate of fire, how many frames has to pass until the next shot is fired
+    player.hp = 100
+    time_game_begun = pygame.time.get_ticks()
+    time_game_finished = 0
+    game_finish = 0
+    boss_spawned = False
+    kills = 0
+    cleargroup(everything)
+    while True:
+        if time_game_finished != 0:  
+            if pygame.time.get_ticks() - time_game_finished > 2000:
+                endgame(scoreint())
+        if player.hp <= 0 and game_finish == 0:
+            game_finish = 1
+            time_game_finished = pygame.time.get_ticks()
+        elif boss_spawned == True and bigboss.hp <= 0 and game_finish == 0 and gamemode == 'arcade':
+            game_finish = 1
+            time_game_finished = pygame.time.get_ticks()
+        for event in pygame.event.get(): # event handling loop
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEMOTION:
+                mousex, mousey = event.pos
+            elif event.type == MOUSEBUTTONUP:
+                mousex, mousey = event.pos
+                mouseClicked = False
+            elif event.type == MOUSEBUTTONDOWN:
+                mousex, mousey = event.pos
+                mouseClicked = True
+        if mouseClicked == True and player_shot_delay <= 0 and player.hp > 0:
+            player.shoot()
+            player_shot_delay = player_rof
+        player_shot_delay -= 1 
+        draw()
+        if not boss_spawned:
+            spawn()
+        for shipt in enemy_list:
+            if shipt.hp < 1:
+                kills += 1
+                shipt.explode()
+                continue
+            shipt.aishoot()
+            shipt.aimov()
+        for shipt in player_list:
+            if shipt.hp <= 0:
+                shipt.explode()
+            else:
+                shipt.rect.x = mousex-shipt.rect.width/2
+                shipt.rect.y = mousey-shipt.rect.height/2 #Centers the mouse at player's ship
+        for explosion in explosions:
+            explosion.cycle()
+
+#run the game loop
+menu()
