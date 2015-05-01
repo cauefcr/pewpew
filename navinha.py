@@ -85,30 +85,30 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         shot_snd.play()
     def move(self): #defines how each type of shots will move, each ship has a different type.
         if self.type == 'simple':
-            self.rect.y += self.spd
+            self.rect.y += self.spd*(dt/dtmod)
         elif self.type == 'curved':#Sine-like movement
-            self.rect.y += self.spd
-            self.rect.x += self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont)
+            self.rect.y += self.spd*(dt/dtmod)
+            self.rect.x += (self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont))*(dt/dtmod)
             self.cont += 0.2
         elif self.type == 'whip':#Circular movement
-            self.rect.y += self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5
-            self.rect.x += self.spd*sin(self.cont) - self.spd*cos(self.cont)
+            self.rect.y += (self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5)*(dt/dtmod)
+            self.rect.x += (self.spd*sin(self.cont) - self.spd*cos(self.cont))*(dt/dtmod)
             self.cont += 0.1
         elif self.type == 'boss':#Explosive sort of shot
-            self.rect.y += self.spd
+            self.rect.y += self.spd*(dt/dtmod)
             if self.rect.y > 320: #When it has travelled enough, explodes into 8 more different shots
                 pi = 3.14159265359
                 cont = 0
                 for i in range(1,9):
-                    spd = self.spd * cos(cont)#Each shot speed is controlled by a factor of sine and cosine
-                    spdy = self.spd * sin(cont)#so that they move diagonally with the correct speed, as to mimic a circle.
+                    spd = (self.spd * cos(cont))*(dt/dtmod)#Each shot speed is controlled by a factor of sine and cosine
+                    spdy = (self.spd * sin(cont))*(dt/dtmod)#so that they move diagonally with the correct speed, as to mimic a circle.
                     instance = shot(self.rect.x,self.rect.y,spd,2/dif,'radial',radial_shot,'red')
                     instance.spdy = spdy
                     cont += pi/4
                 self.kill()#.kill() is a method that comes with the inheritance from pygame.sprite.Sprite, it completely deletes the object
         elif self.type == 'radial':
-            self.rect.y += self.spdy
-            self.rect.x += self.spd
+            self.rect.y += self.spdy*(dt/dtmod)
+            self.rect.x += self.spd*(dt/dtmod)
     
 class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main class that represents all space-ships in the game.
     state = 'hunting'
@@ -146,10 +146,10 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
     def aimov(self): #uses states as the mean of choosing how the AI ships will move
         if self.state == "hunting": #follows the player
             if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 \
-               and self.spd <= self.maxspd:
+               and self.spd <= self.maxspd*(dt/dtmod):
                 self.spd += self.accel
             elif player.rect.centerx < self.rect.centerx-(self.maxspd+self.rect.width/4) \
-               and self.spd > -self.maxspd:
+               and self.spd > -self.maxspd*(dt/dtmod):
                 self.spd -= self.accel
                 
         if self.state == "fleeing": #runs from the player
@@ -159,11 +159,11 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
             if player.rect.centerx > self.rect.centerx \
                and self.rect.centerx in range(0,graphwidth)\
                and self.spd > -self.maxspd:#if the player is to the right of the ship, move towards the left
-                self.spd -= self.accel
+                self.spd -= self.accel*(dt/dtmod)
             elif player.rect.centerx < self.rect.centerx \
                and self.rect.centerx in range(0,graphwidth)\
                and self.spd < self.maxspd:#if its left, move right
-                self.spd += self.accel
+                self.spd += self.accel*(dt/dtmod)
         self.rect.x += self.spd
             
     def aishoot(self): #the method which is used for controlling shot spawns, and only if it's an member of the AI team
@@ -538,7 +538,13 @@ def play():
 
     global kills
     global boss_spawned
-    
+    global prevtime
+    global dt
+    global nowtime
+    global dtmod
+    nowtime = pygame.time.get_ticks()
+    prevtime = pygame.time.get_ticks()
+    dtmod = 13
     player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
     
     player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
@@ -551,6 +557,10 @@ def play():
     kills = 0
     cleargroup(everything)
     while True:
+        nowtime = pygame.time.get_ticks()
+        dt = nowtime-prevtime
+        prevtime = pygame.time.get_ticks()
+        #print str(dt) + " dt " + str(prevtime) + " prevtime " + str(nowtime) + " nowtime"
         if time_game_finished != 0:  
             if pygame.time.get_ticks() - time_game_finished > 2000:
                 endgame(scoreint())
@@ -597,7 +607,6 @@ def play():
                 shipt.rect.y = mousey-shipt.rect.height/2 #Centers the mouse at player's ship
         for explosion in explosions:
             explosion.cycle()
-
 #run the game loop
 while True:
     menu()
