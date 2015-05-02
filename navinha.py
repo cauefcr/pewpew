@@ -329,7 +329,7 @@ def drawshots():  #draws all the shots and checks collision
                 ship.hp -= shot.dmg
                 ship.state = "fleeing"
                 shot.kill()
-
+                
 def cleargroup(group): #cleaning 
     for i in group:
         for j in i:
