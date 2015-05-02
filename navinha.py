@@ -291,8 +291,6 @@ def drawshots():  #draws all the shots and checks collision
         else:
             xvariation = range(newx,oldx+1)
         
-        x_is_true = False
-        y_is_true = False
         DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
         if shot.rect.centery not in range(0,graphheight)\
            or shot.rect.centerx not in range(0,graphwidth): 
@@ -300,6 +298,8 @@ def drawshots():  #draws all the shots and checks collision
             continue
         
         for ship in player_list:
+            x_is_true = False
+            y_is_true = False
             for number in xvariation:
                 if number in range(ship.rect.left,ship.rect.right):
                     x_is_true = True
@@ -315,17 +315,38 @@ def drawshots():  #draws all the shots and checks collision
         
     for shot in player_shots:
         oldy = shot.rect.centery
+        oldx = shot.rect.centerx
         shot.move()
         newy = shot.rect.centery
-        yvariation = range(newy,oldy+1)#Reverses newy and oldy because player.shotspd is negative
+        newx = shot.rect.centerx
+
+        if oldy - newy <=0:
+            yvariation = range(oldy,newy+1)
+        else:
+            yvariation = range(newy,oldy+1)
+        if oldx - newx <= 0:
+            xvariation = range(oldx,newx+1)
+        else:
+            xvariation = range(newx,oldx+1)
+        
+
         DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
         if shot.rect.centery not in range(0,graphheight)\
            or shot.rect.centerx not in range(0,graphwidth): #shot collision check with the enemies
             shot.kill()
             continue
         for ship in enemy_list:
-            if ship.rect.bottom in yvariation \
-            and shot.rect.centerx in range(ship.rect.left,ship.rect.right):
+            x_is_true = False
+            y_is_true = False
+            for number in xvariation:
+                if number in range(ship.rect.left,ship.rect.right):
+                    x_is_true = True
+                    break
+            for number in yvariation:
+                if number in range(ship.rect.top,ship.rect.bottom):
+                    y_is_true = True
+                    break
+            if y_is_true and x_is_true:
                 ship.hp -= shot.dmg
                 ship.state = "fleeing"
                 shot.kill()
