@@ -276,29 +276,55 @@ def drawships(shipt): #draws all the different ships in a given list
 
 def drawshots():  #draws all the shots and checks collision 
     for shot in enemy_shots:
+        oldy = shot.rect.centery
+        oldx = shot.rect.centerx
         shot.move()
+        newy = shot.rect.centery
+        newx = shot.rect.centerx
+
+        if oldy - newy <=0:
+            yvariation = range(oldy,newy+1)
+        else:
+            yvariation = range(newy,oldy+1)
+        if oldx - newx <= 0:
+            xvariation = range(oldx,newx+1)
+        else:
+            xvariation = range(newx,oldx+1)
+        
+        x_is_true = False
+        y_is_true = False
         DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
         if shot.rect.centery not in range(0,graphheight)\
            or shot.rect.centerx not in range(0,graphwidth): 
-            enemy_shots.remove(shot)
             shot.kill()
             continue
+        
         for ship in player_list:
-            if shot.rect.centery in range(ship.rect.top,ship.rect.bottom) \
-            and shot.rect.centerx in range(ship.rect.left,ship.rect.right): #shot collision checking with the player
+            for number in xvariation:
+                if number in range(ship.rect.left,ship.rect.right):
+                    x_is_true = True
+                    break
+            for number in yvariation:
+                if number in range(ship.rect.top,ship.rect.bottom):
+                    y_is_true = True
+                    break
+            if y_is_true and x_is_true: #shot collision check with the player
                 ship.hp -= shot.dmg
                 take_dmg_snd.play()
                 shot.kill()
         
     for shot in player_shots:
+        oldy = shot.rect.centery
         shot.move()
+        newy = shot.rect.centery
+        yvariation = range(newy,oldy+1)#Reverses newy and oldy because player.shotspd is negative
         DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
         if shot.rect.centery not in range(0,graphheight)\
-           or shot.rect.centerx not in range(0,graphwidth): #shot collision checking with the enemies
+           or shot.rect.centerx not in range(0,graphwidth): #shot collision check with the enemies
             shot.kill()
             continue
         for ship in enemy_list:
-            if shot.rect.centery in range(ship.rect.top,ship.rect.bottom) \
+            if ship.rect.bottom in yvariation \
             and shot.rect.centerx in range(ship.rect.left,ship.rect.right):
                 ship.hp -= shot.dmg
                 ship.state = "fleeing"
