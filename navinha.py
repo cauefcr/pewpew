@@ -422,8 +422,29 @@ def endgame(scoreint): #loop that holds what happens after either you or the bos
                     pygame.time.delay(3600)
                     ost_snd.fadeout(1000)
                     return
-                    
-def choosedif(): #ui for choosing difficulty 
+
+def choiceprint(topstr,midstr,botstr):
+    """Draws 3 strings, centered"""
+    DISPLAYSURF2.blit(font.render(topstr, True, WHITE),(graphwidth/2 - font.size(topstr)[0]/2, graphheight/2 - font.size(topstr)[1]))
+    DISPLAYSURF2.blit(font.render(midstr, True, WHITE),(graphwidth/2 - font.size(midstr)[0]/2, graphheight/2))
+    DISPLAYSURF2.blit(font.render(botstr, True, WHITE),(graphwidth/2 - font.size(botstr)[0]/2, graphheight/2 + font.size(botstr)[1]))
+    pygame.display.update()
+    return
+
+def choicepos(strg,pos):
+    """Return dict with range in x(key 0) and range in y(key 1) of the given position, which can be top mid bot"""
+    if pos == "top":
+        posdict = {1:range(graphheight/2 - font.size(strg)[1],graphheight/2),\
+                   0:range(graphwidth/2 - font.size(strg)[0]/2,graphwidth/2 + font.size(strg)[0]/2)}
+    if pos == "mid":
+        posdict = {1:range(graphheight/2, graphheight/2 + font.size(strg)[1]),\
+                   0:range(graphwidth/2 - font.size(strg)[0]/2,graphwidth/2 + font.size(strg)[0]/2)}
+    if pos == "bot":
+        posdict = {1:range(graphheight/2 + font.size(strg)[1],graphheight/2 + font.size(strg)[1]*2),\
+                   0:range(graphwidth/2 - font.size(strg)[0]/2, graphwidth/2 + font.size(strg)[0]/2)}
+    return posdict
+            
+def choosedif(): #ui for choosing difficulty
     global dif
     global mousex
     global mousey
@@ -431,10 +452,7 @@ def choosedif(): #ui for choosing difficulty
     DISPLAYSURF2.fill(BLACK)
     mouseClicked = False
     while True:
-        DISPLAYSURF2.blit(font.render("Easy", True, WHITE),(graphwidth/2 - font.size("Easy")[0]/2, graphheight/2 - font.size("Easy")[1]))
-        DISPLAYSURF2.blit(font.render("Medium", True, WHITE),(graphwidth/2 - font.size("Medium")[0]/2, graphheight/2))
-        DISPLAYSURF2.blit(font.render("Hard", True, WHITE),(graphwidth/2 - font.size("Hard")[0]/2, graphheight/2 + font.size("Hard")[1]))
-        pygame.display.update()
+        choiceprint("Easy","Medium","Hard")
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 pygame.quit()
@@ -447,26 +465,63 @@ def choosedif(): #ui for choosing difficulty
             elif event.type == MOUSEBUTTONUP:
                 mousex, mousey = event.pos
                 mouseClicked = False
-        if mousey in range(graphheight/2 - font.size("Easy")[1],graphheight/2) \
-           and mousex in range(graphwidth/2 - font.size("Easy")[0]/2,graphwidth/2 + font.size("Easy")[0]/2) \
+        if mousey in choicepos("Easy","top")[1] \
+           and mousex in choicepos("Easy","top")[0]\
            and mouseClicked == True:
             dif = 3
             mouseClicked = False
             play()
             return
-        if mousey in range(graphheight/2, graphheight/2 + font.size("Medium")[1]) \
-           and mousex in range(graphwidth/2 - font.size("Medium")[0]/2,graphwidth/2 + font.size("Medium")[0]/2) \
+        if mousey in choicepos("Medium","mid")[1] \
+           and mousex in choicepos("Medium","mid")[0] \
            and mouseClicked == True:
             dif = 2
             mouseClicked = False
             play()
             return
-        if mousey in range(graphheight/2 + font.size("Hard")[1],graphheight/2 + font.size("Hard")[1]*2) \
-           and mousex in range(graphwidth/2 - font.size("Hard")[0]/2, graphwidth/2 + font.size("Hard")[0]/2) \
+        if mousey in choicepos("Hard","bot")[1] \
+           and mousex in choicepos("Hard","bot")[0] \
            and mouseClicked == True:
             dif = 1
             mouseClicked = False
             play()
+            return
+        
+def choosescore(): #ui for choosing which highscore to show
+    global mousex
+    global mousey
+    pygame.mouse.set_visible(1)
+    DISPLAYSURF2.fill(BLACK)
+    mouseClicked = False
+    while True:
+        choiceprint("Survival"," ","Arcade")
+        for event in pygame.event.get(): # event handling loop
+            if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEMOTION:
+                mousex, mousey = event.pos
+            elif event.type == MOUSEBUTTONDOWN:
+                mousex, mousey = event.pos
+                mouseClicked = True
+            elif event.type == MOUSEBUTTONUP:
+                mousex, mousey = event.pos
+                mouseClicked = False
+        if mousey in choicepos("Survival","top")[1] \
+           and mousex in choicepos("Survival","top")[0] \
+           and mouseClicked == True:
+            prnt(score.getScore("SurScores.txt"))
+            pygame.time.delay(3600)
+            mouseClicked = False
+            menu()
+            return
+        if mousey in choicepos("Arcade","bot")[1] \
+           and mousex in choicepos("Arcade","bot")[0] \
+           and mouseClicked == True:
+            prnt(score.getScore("Scores.txt"))
+            pygame.time.delay(3600)
+            mouseClicked = False
+            menu()
             return
 
 def choosemode(): #ui for choosing mode
@@ -477,9 +532,7 @@ def choosemode(): #ui for choosing mode
     DISPLAYSURF2.fill(BLACK)
     mouseClicked = False
     while True:
-        DISPLAYSURF2.blit(font.render("Arcade", True, WHITE),(graphwidth/2 - font.size("Arcade")[0]/2, graphheight/2 + font.size("Arcade")[1]))
-        DISPLAYSURF2.blit(font.render("Survival", True, WHITE),(graphwidth/2 - font.size("Survival")[0]/2, graphheight/2 - font.size("Survival")[1]))
-        pygame.display.update()
+        choiceprint("Survival"," ","Arcade")
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 pygame.quit()
@@ -492,15 +545,15 @@ def choosemode(): #ui for choosing mode
             elif event.type == MOUSEBUTTONUP:
                 mousex, mousey = event.pos
                 mouseClicked = False
-        if mousey in range(graphheight/2 - font.size("Survival")[1],graphheight/2) \
-           and mousex in range(graphwidth/2 - font.size("Survival")[0]/2,graphwidth/2 + font.size("Survival")[0]/2) \
+        if mousey in choicepos("Survival","top")[1] \
+           and mousex in choicepos("Survival","top")[0] \
            and mouseClicked == True:
             gamemode = 'survival'
             play()
             mouseClicked = False
             return
-        if mousey in range(graphheight/2 + font.size("Arcade")[1],graphheight/2 + font.size("Arcade")[1]*2) \
-           and mousex in range(graphwidth/2 - font.size("Arcade")[0]/2, graphwidth/2 + font.size("Arcade")[0]/2) \
+        if mousey in choicepos("Arcade","bot")[1] \
+           and mousex in choicepos("Arcade","bot")[0] \
            and mouseClicked == True:
             gamemode = 'arcade'
             mouseClicked = False
@@ -512,6 +565,7 @@ def scoreint(): #defines how the score is calculated
         return ((player.hp*100000/(time_game_finished-time_game_begun)+(kills*100))/dif)
     elif gamemode == "survival":
         return (time_game_finished-time_game_begun)/1000
+    
 def menu(): #main menu
     pygame.mouse.set_visible(1)
     endgame_snd.play()
@@ -546,9 +600,9 @@ def menu(): #main menu
         if mousey in range(((graphheight/2)+(font.size("HIGHSCORE")[1]*2)),(graphheight/2)+(font.size("HIGHSCORE")[1]*3)) \
            and mousex in range(graphwidth/2-(font.size("HIGHSCORE")[0])/2,graphwidth/2+(font.size("HIGHSCORE")[0])/2) \
            and mouseClicked == True:
-            prnt(score.getScore())
-            pygame.time.delay(3600)
+            choosescore()
             mouseClicked = False
+            return
 
 def play():
     endgame_snd.fadeout(1000)
