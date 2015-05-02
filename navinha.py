@@ -66,7 +66,7 @@ ex13 = pygame.image.load('explosion13.png')
 ex14 = pygame.image.load('explosion14.png')
 
 #set up classes
-class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will create with their methods
+class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will create with their shoot() method
     def __init__(self,x,y,spd,dmg,type,sprite,team):
         pygame.sprite.Sprite.__init__(self)
         self.spd = spd
@@ -83,17 +83,17 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         else:
             player_shots.add(self)
         shot_snd.play()
-    def move(self): #defines how each type of shots will move, each ship has a different type.
+    def move(self): #defines how each type of shot will move, each ship has a different type.
         if self.type == 'simple':
             self.rect.y += self.spd*(dt/dtmod)
         elif self.type == 'curved':#Sine-like movement
             self.rect.y += self.spd*(dt/dtmod)
             self.rect.x += (self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont))*(dt/dtmod)
-            self.cont += 0.2
+            self.cont += 0.2*(dt/dtmod)
         elif self.type == 'whip':#Circular movement
             self.rect.y += (self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5)*(dt/dtmod)
             self.rect.x += (self.spd*sin(self.cont) - self.spd*cos(self.cont))*(dt/dtmod)
-            self.cont += 0.1
+            self.cont += 0.1*(dt/dtmod)
         elif self.type == 'boss':#Explosive sort of shot
             self.rect.y += self.spd*(dt/dtmod)
             if self.rect.y > 320: #When it has travelled enough, explodes into 8 more different shots
@@ -104,7 +104,7 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
                     spdy = (self.spd * sin(cont))*(dt/dtmod)#so that they move diagonally with the correct speed, as to mimic a circle.
                     instance = shot(self.rect.x,self.rect.y,spd,2/dif,'radial',radial_shot,'red')
                     instance.spdy = spdy
-                    cont += pi/4
+                    cont += pi/4 #Variation in degrees between each shot
                 self.kill()#.kill() is a method that comes with the inheritance from pygame.sprite.Sprite, it completely deletes the object
         elif self.type == 'radial':
             self.rect.y += self.spdy*(dt/dtmod)
@@ -146,11 +146,11 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
     def aimov(self): #uses states as the mean of choosing how the AI ships will move
         if self.state == "hunting": #follows the player
             if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 \
-               and self.spd <= self.maxspd*(dt/dtmod):
-                self.spd += self.accel
+               and self.spd <= self.maxspd:
+                self.spd += self.accel*(dt/dtmod)
             elif player.rect.centerx < self.rect.centerx-(self.maxspd+self.rect.width/4) \
-               and self.spd > -self.maxspd*(dt/dtmod):
-                self.spd -= self.accel
+               and self.spd > -self.maxspd:
+                self.spd -= self.accel*(dt/dtmod)
                 
         if self.state == "fleeing": #runs from the player
             if self.rect.centerx not in range(0,graphwidth): #when ship reaches either of the screen edges, go back to hunting
@@ -168,7 +168,7 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
             
     def aishoot(self): #the method which is used for controlling shot spawns, and only if it's an member of the AI team
         if self.team == "red":
-            self.delay -= 1
+            self.delay -= dt/dtmod
         if self.delay <= 0:
                 self.shoot()
                 self.delay = self.maxdelay
@@ -218,11 +218,12 @@ class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is b
         self.rect.y = y
         explosions.add(self)
     def cycle(self):#Everytime this method is called, it changes the current sprite to the next until its at the last one
-        if self.explode_frame == len(self.explodeimg):
+        if self.explode_frame >= len(self.explodeimg):
             self.kill()#Then it deletes the whole object.
             return
         self.image = self.explodeimg[self.explode_frame]
-        self.explode_frame += 1
+        self.explode_frame += 1 * (dt/dtmod)
+        self.explode_frame = int(self.explode_frame)
         
 #set up the variables
 #mouse variables
@@ -316,11 +317,11 @@ def spawn(): #controls where and when will the enemies appear
     time = pygame.time.get_ticks() + 30 #gets time after pygame.init was called, in ms
     global boss_spawned
     global bigboss #bigboss has to be global so that bigboss.hp and .x/.y may be checked along the code
-    if (time - time_game_begun) % (1000 + (1000*dif)) < 17 and boss_spawned == False: #before the boss has spawned, spawn random mobs, from either left or right
+    if (time - time_game_begun) % (1000 + (1000*dif)) < dt: #spawn random mobs, from either left or right
         if randint(-1,1) == 1:
             spawnrand = randint(0,2)
             if spawnrand == 0:
-                mob1 = ship(graphwidth+30,randint(15,graphheight/3),20,6,3,7/dif,'simple',15,mob1Img,straightshot,"red")
+                mob1 = ship(graphwidth+30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straightshot,"red")
             elif spawnrand == 1:
                 mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'curved',30,mob2Img,curvedshotImg,'red')
             elif spawnrand == 2:
@@ -328,7 +329,7 @@ def spawn(): #controls where and when will the enemies appear
         else:
             spawnrand = randint(0,2)
             if spawnrand == 0:
-                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',15,mob1Img,straightshot,"red")
+                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straightshot,"red")
             elif spawnrand == 1:
                 mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'curved',30,mob2Img,curvedshotImg,'red')
             elif spawnrand == 2:
@@ -544,12 +545,11 @@ def play():
     global dtmod
     nowtime = pygame.time.get_ticks()
     prevtime = pygame.time.get_ticks()
-    dtmod = 13
+    dtmod = 16 #16 is 1/60, hence, the amount of miliseconds between one frame and another in 60fps
     player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
     
     player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
     player_rof = 15 #rate of fire, how many frames has to pass until the next shot is fired
-    player.hp = 100
     time_game_begun = pygame.time.get_ticks()
     time_game_finished = 0
     game_finish = 0
@@ -558,7 +558,7 @@ def play():
     cleargroup(everything)
     while True:
         nowtime = pygame.time.get_ticks()
-        dt = nowtime-prevtime
+        dt = nowtime-prevtime #delta time
         prevtime = pygame.time.get_ticks()
         #print str(dt) + " dt " + str(prevtime) + " prevtime " + str(nowtime) + " nowtime"
         if time_game_finished != 0:  
@@ -588,7 +588,7 @@ def play():
         if mouseClicked == True and player_shot_delay <= 0 and player.hp > 0:
             player.shoot()
             player_shot_delay = player_rof
-        player_shot_delay -= 1 
+        player_shot_delay -= dt/dtmod
         draw()
         if not boss_spawned:
             spawn()
