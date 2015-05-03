@@ -65,7 +65,9 @@ ex12 = pygame.image.load('explosion12.png')
 ex13 = pygame.image.load('explosion13.png')
 ex14 = pygame.image.load('explosion14.png')
 
-#set up classes
+###########################=========############################
+######################## Classes Setup #########################
+###########################=========############################
 class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will create with their shoot() method
     def __init__(self,x,y,spd,dmg,type,sprite,team):
         pygame.sprite.Sprite.__init__(self)
@@ -188,7 +190,7 @@ class boss(ship): #boss has some different patterns, so we created a new object 
         instance = explos(self.rect.x+self.rect.width,self.rect.y)
         self.kill()
     def aimov(self): #changes the movement for the boss, so that it can spawn in the middle
-        if self.rect.centery < self.rect.height+5:#Also never flees. The boss doesn't mind taking some shots
+        if self.rect.centery < self.rect.height:#Also never flees. The boss doesn't mind taking some shots
             self.rect.centery += self.accel*(dt/dtmod)
         if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 and self.spd <= self.maxspd/2:
             self.spd += self.accel*(dt/dtmod)
@@ -201,11 +203,11 @@ class boss(ship): #boss has some different patterns, so we created a new object 
         if self.hp <= 300:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
         if self.hp <= 220:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'simple',straightshot,self.team)
+            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd+5,self.shotdmg,'simple',straightshot,self.team)
         if self.hp <= 180:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'curved',curvedshotImg,self.team)
+            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd-2,self.shotdmg,'curved',curvedshotImg,self.team)
         if self.hp <= 120:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'whip',whipImg,self.team)
+            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd-4,self.shotdmg,'whip',whipImg,self.team)
             
 class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is below 0, creating an explosion where it was
     explode_frame = 0
@@ -252,7 +254,9 @@ font = pygame.font.SysFont('impact', 50, False, False) #prepares a font accordin
 
 boss_spawned = False
 
-#draw
+############################========############################
+######################## Game mechanics ########################
+###########################=========############################
 def draw(): #calls the surface drawing functions, and updates the screen
     DISPLAYSURF.blit(bg,(0,0))
     drawships(enemy_list)
@@ -261,7 +265,6 @@ def draw(): #calls the surface drawing functions, and updates the screen
     drawexplosions()
     drawhp()
     pygame.display.update()
-    fpsClock.tick(FPS)
     
 def drawhp(): #draws the hp bar for the boss and the player
     if boss_spawned == True \
@@ -389,6 +392,10 @@ def spawn(): #controls where and when will the enemies appear
         else:
             bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
 
+
+###########################=========############################
+###########################  Menus  ############################
+###########################=========############################
 def inprint(inputs,scoreint): #ui for high-score name input
     global namestr
     global font
@@ -646,7 +653,7 @@ def play():
     global dtmod
     nowtime = pygame.time.get_ticks()
     prevtime = pygame.time.get_ticks()
-    dtmod = 16 #16 is 1/60, hence, the amount of miliseconds between one frame and another in 60fps
+    dtmod = 16 #16 is 1000/60, hence, the amount of miliseconds between one frame and another in 60fps
     player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
     
     player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
@@ -708,6 +715,9 @@ def play():
                 shipt.rect.y = mousey-shipt.rect.height/2 #Centers the mouse at player's ship
         for explosion in explosions:
             explosion.cycle()
+        fpsClock.tick(FPS)
+
+
 #run the game loop
 while True:
     menu()
