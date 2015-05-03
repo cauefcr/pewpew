@@ -1,7 +1,7 @@
 import pygame, sys
 from random import randint
 from pygame.locals import *
-from math import sin,cos
+from math import sin,cos,pi
 
 pygame.init()
 
@@ -38,16 +38,17 @@ BLUE = ( 0, 0, 255)
 
 #set up sprites
 bg = pygame.image.load('BG.jpg')
-playerImg = pygame.image.load('nave.png')
-playershotImg = pygame.image.load('shotp.png')
+playerImg = pygame.image.load('player_ship.png')
+playershotImg = pygame.image.load('player_shot.png')
 bossImg = pygame.image.load('bigboss.png')
-radial_shot = pygame.image.load('boss_shot.png')
-straightshot = pygame.image.load('shote.png')
+radial_shot = pygame.image.load('boss_radial_shot.png')
+straight_shotImg = pygame.image.load('straight_shot.png')
+whip_shotImg = pygame.image.load('whip_shot.png')
+wave_shotImg = pygame.image.load('wave_shot.png')
 mob1Img = pygame.image.load('mob1.png')
-curvedshotImg = pygame.image.load('circleshote.png')
 mob2Img = pygame.image.load('mob2.png')
 mob3Img = pygame.image.load('mob3.png')
-whipImg = pygame.image.load('whip.png')
+
 
 #explosions
 ex1 = pygame.image.load('explosion1.png')
@@ -88,7 +89,7 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
     def move(self): #defines how each type of shot will move, each ship has a different type.
         if self.type == 'simple':
             self.rect.y += self.spd*(dt/dtmod)
-        elif self.type == 'curved':#Sine-like movement
+        elif self.type == 'wave':#Sine-like movement
             self.rect.y += self.spd*(dt/dtmod)
             self.rect.x += (self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont))*(dt/dtmod)
             self.cont += 0.2*(dt/dtmod)
@@ -99,7 +100,6 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         elif self.type == 'boss':#Explosive sort of shot
             self.rect.y += self.spd*(dt/dtmod)
             if self.rect.y > 320: #When it has travelled enough, explodes into 8 more different shots
-                pi = 3.14159265359
                 cont = 0
                 for i in range(1,9):
                     spd = (self.spd * cos(cont))*(dt/dtmod)#Each shot speed is controlled by a factor of sine and cosine
@@ -196,18 +196,18 @@ class boss(ship): #boss has some different patterns, so we created a new object 
             self.spd += self.accel*(dt/dtmod)
             self.rect.x += self.spd/4
         elif player.rect.centerx < self.rect.centerx-(self.maxspd+self.rect.width/4) and self.spd > -self.maxspd/2:
-           self.spd -= self.accel*(dt/dtmod)
-           self.rect.x += self.spd/4
+            self.spd -= self.accel*(dt/dtmod)
+            self.rect.x += self.spd/4
         self.rect.x += self.spd
     def shoot(self): #works in a way so that the hp affects how the boss attacks.
         if self.hp <= 300:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
         if self.hp <= 220:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd+5,self.shotdmg,'simple',straightshot,self.team)
+            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd+3,self.shotdmg,'simple',straight_shotImg,self.team)
         if self.hp <= 180:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd-2,self.shotdmg,'curved',curvedshotImg,self.team)
+            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'wave',wave_shotImg,self.team)
         if self.hp <= 120:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd-4,self.shotdmg,'whip',whipImg,self.team)
+            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd-3,self.shotdmg,'whip',whip_shotImg,self.team)
             
 class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is below 0, creating an explosion where it was
     explode_frame = 0
@@ -371,26 +371,26 @@ def spawn(): #controls where and when will the enemies appear
         if randint(-1,1) == 1:
             spawnrand = randint(0,2)
             if spawnrand == 0:
-                mob1 = ship(graphwidth+30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straightshot,"red")
+                mob1 = ship(graphwidth+30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
             elif spawnrand == 1:
-                mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'curved',30,mob2Img,curvedshotImg,'red')
+                mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 2:
-                mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whipImg,'red')
+                mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
         else:
             spawnrand = randint(0,2)
             if spawnrand == 0:
-                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straightshot,"red")
+                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
             elif spawnrand == 1:
-                mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'curved',30,mob2Img,curvedshotImg,'red')
+                mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 2:
-                mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whipImg,'red')
+                mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
                 
     if (time - time_game_begun) % 30000 <= 17 and boss_spawned == False: #if a certain time has passed and the boss has not appeared, make him appear
         boss_spawned = True
         if randint(0,1) == 1:
-            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
+            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straight_shotImg,"red")
         else:
-            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straightshot,"red")
+            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straight_shotImg,"red")
 
 
 ###########################=========############################
