@@ -472,7 +472,8 @@ def choicepos(strg,pos):
                    0:range(graphwidth/2 - font.size(strg)[0]/2, graphwidth/2 + font.size(strg)[0]/2)}
     return posdict
             
-def choosedif(): #ui for choosing difficulty
+def choosedif():
+    """ui for choosing difficulty, takes no arguments"""
     global dif
     global mousex
     global mousey
@@ -480,6 +481,7 @@ def choosedif(): #ui for choosing difficulty
     DISPLAYSURF2.fill(BLACK)
     mouseClicked = False
     while True:
+        DISPLAYSURF2.blit(font.render("Back", True, WHITE),(font.size("Back")[0]/8, graphheight - font.size("Back")[1]))
         choiceprint("Easy","Medium","Hard")
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
@@ -498,30 +500,35 @@ def choosedif(): #ui for choosing difficulty
            and mouseClicked == True:
             dif = 3
             mouseClicked = False
-            play()
             return
         if mousey in choicepos("Medium","mid")[1] \
            and mousex in choicepos("Medium","mid")[0] \
            and mouseClicked == True:
             dif = 2
             mouseClicked = False
-            play()
             return
         if mousey in choicepos("Hard","bot")[1] \
            and mousex in choicepos("Hard","bot")[0] \
            and mouseClicked == True:
             dif = 1
             mouseClicked = False
-            play()
+            return
+        if mousey in range(graphheight - font.size("Back")[1],graphheight)\
+           and mousex in range(font.size("Back")[0]/8,(font.size("Back")[0]/8)+font.size("Back")[0])\
+           and mouseClicked == True:
+            dif = 0
+            mouseClicked = False
             return
         
-def choosescore(): #ui for choosing which highscore to show
+def choosescore():
+    """ui for choosing which highscore to show, takes no arguments"""
     global mousex
     global mousey
     pygame.mouse.set_visible(1)
     DISPLAYSURF2.fill(BLACK)
     mouseClicked = False
     while True:
+        DISPLAYSURF2.blit(font.render("Back", True, WHITE),(font.size("Back")[0]/8, graphheight - font.size("Back")[1]))
         choiceprint("Survival"," ","Arcade")
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
@@ -541,7 +548,6 @@ def choosescore(): #ui for choosing which highscore to show
             prnt(score.getScore("SurScores.txt"))
             pygame.time.delay(3600)
             mouseClicked = False
-            menu()
             return
         if mousey in choicepos("Arcade","bot")[1] \
            and mousex in choicepos("Arcade","bot")[0] \
@@ -549,17 +555,24 @@ def choosescore(): #ui for choosing which highscore to show
             prnt(score.getScore("Scores.txt"))
             pygame.time.delay(3600)
             mouseClicked = False
-            menu()
+            return
+        if mousey in range(graphheight - font.size("Back")[1],graphheight)\
+           and mousex in range(font.size("Back")[0]/8,(font.size("Back")[0]/8)+font.size("Back")[0])\
+           and mouseClicked == True:
+            mouseClicked = False
             return
 
-def choosemode(): #ui for choosing mode
+def choosemode(): 
+    """UI for choosing game mode, takes no arguments"""
     global gamemode
     global mousex
     global mousey
+    global dif
     pygame.mouse.set_visible(1)
     DISPLAYSURF2.fill(BLACK)
     mouseClicked = False
     while True:
+        DISPLAYSURF2.blit(font.render("Back", True, WHITE),(font.size("Back")[0]/8, graphheight - font.size("Back")[1]))
         choiceprint("Survival"," ","Arcade")
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
@@ -577,18 +590,25 @@ def choosemode(): #ui for choosing mode
            and mousex in choicepos("Survival","top")[0] \
            and mouseClicked == True:
             gamemode = 'survival'
-            play()
             mouseClicked = False
-            return
+            return play()
         if mousey in choicepos("Arcade","bot")[1] \
            and mousex in choicepos("Arcade","bot")[0] \
            and mouseClicked == True:
             gamemode = 'arcade'
             mouseClicked = False
             choosedif()
+            if dif != 0:
+                play()
+            dif = 1
             return
-        
-def scoreint(): #defines how the score is calculated
+        if mousey in range(graphheight - font.size("Back")[1],graphheight)\
+           and mousex in range(font.size("Back")[0]/8,(font.size("Back")[0]/8)+font.size("Back")[0])\
+           and mouseClicked == True:
+            mouseClicked = False
+            return
+def scoreint():
+    """Returns the player score"""
     if gamemode == "arcade":
         return ((player.hp*100000/(time_game_finished-time_game_begun)+(kills*100))/dif)
     elif gamemode == "survival":
@@ -624,15 +644,15 @@ def menu(): #main menu
            and mouseClicked == True:
             mouseClicked = False
             choosemode()
-            return
+            return 
         if mousey in range(((graphheight/2)+(font.size("HIGHSCORE")[1]*2)),(graphheight/2)+(font.size("HIGHSCORE")[1]*3)) \
            and mousex in range(graphwidth/2-(font.size("HIGHSCORE")[0])/2,graphwidth/2+(font.size("HIGHSCORE")[0])/2) \
            and mouseClicked == True:
-            choosescore()
             mouseClicked = False
+            choosescore()
             return
 
-def play():
+def play(): #main game loop
     endgame_snd.fadeout(1000)
     pygame.mouse.set_visible(0)
     ost_snd.play()
@@ -717,7 +737,5 @@ def play():
             explosion.cycle()
         fpsClock.tick(FPS)
 
-
-#run the game loop
-while True:
+while True: #so that even if the game ends, player is taken to the menu after.
     menu()
