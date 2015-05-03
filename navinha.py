@@ -236,6 +236,7 @@ mouseClicked = False
 game_finish = 0
 time_game_begun = 0
 time_game_finished = 0
+level = 4
 
 #groups that will contain every object in the game
 enemy_list = pygame.sprite.Group()
@@ -258,7 +259,11 @@ boss_spawned = False
 ######################## Game mechanics ########################
 ###########################=========############################
 def draw(): #calls the surface drawing functions, and updates the screen
+    global levelwait
     DISPLAYSURF.blit(bg,(0,0))
+    if levelwait > 0:
+        levelwait -= dt
+        DISPLAYSURF2.blit(font.render("Level " + str(level), True, WHITE),(font.size("Level" + str(level))[0]/8, graphheight - font.size("Level" + str(level))[1]))
     drawships(enemy_list)
     drawships(player_list)
     drawshots()
@@ -363,34 +368,58 @@ def drawexplosions(): #draws all the explosions
     for explosion in explosions:
         DISPLAYSURF.blit(explosion.image, (explosion.rect.x, explosion.rect.y))
 
-def spawn(): #controls where and when will the enemies appear
+def spawn(level): #controls where and when will the enemies appear
     time = pygame.time.get_ticks() + 30 #gets time after pygame.init was called, in ms
     global boss_spawned
     global bigboss #bigboss has to be global so that bigboss.hp and .x/.y may be checked along the code
     if (time - time_game_begun) % (1000 + (1000*dif)) < dt: #spawn random mobs, from either left or right
         if randint(-1,1) == 1:
-            spawnrand = randint(0,2)
-            if spawnrand == 0:
+            if level < 4:
+                spawnrand = randint(1,level)
+            else:
+                spawnrand = randint(1,3)
+            if spawnrand == 1:
                 mob1 = ship(graphwidth+30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
-            elif spawnrand == 1:
-                mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 2:
+                mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
+            elif spawnrand == 3:
                 mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
         else:
-            spawnrand = randint(0,2)
-            if spawnrand == 0:
+            if level < 4:
+                spawnrand = randint(1,level)
+            else:
+                spawnrand = randint(1,3)
+            if spawnrand == 1:
                 mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
-            elif spawnrand == 1:
-                mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 2:
+                mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
+            elif spawnrand == 3:
                 mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
                 
-    if (time - time_game_begun) % 30000 <= 17 and boss_spawned == False: #if a certain time has passed and the boss has not appeared, make him appear
+    if level >= 4 and boss_spawned == False and (leveltimechange - time) % 30000 <= 17: #if a certain time has passed, the boss has not appeared, and it's on the right level, make him appear
         boss_spawned = True
         if randint(0,1) == 1:
             bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straight_shotImg,"red")
         else:
             bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straight_shotImg,"red")
+            
+def levelmechanics(): 
+    global level
+    global levelwait
+    global lastkills
+    global leveltimechange
+    global kills
+    if gamemode == "arcade" and level <= 4:
+        if kills >= 15 or pygame.time.get_ticks() - leveltimechange >= 120000:
+            leveltimechange = pygame.time.get_ticks()
+            lastkills += kills
+            kills = 0
+            level += 1
+            levelwait = 3000
+            print level
+        return
+    else:
+        return
 
 
 ###########################=========############################
@@ -568,6 +597,7 @@ def choosemode():
     global mousex
     global mousey
     global dif
+    global level
     pygame.mouse.set_visible(1)
     DISPLAYSURF2.fill(BLACK)
     mouseClicked = False
@@ -599,6 +629,7 @@ def choosemode():
             mouseClicked = False
             choosedif()
             if dif != 0:
+                level = 1
                 play()
             dif = 1
             return
@@ -607,10 +638,11 @@ def choosemode():
            and mouseClicked == True:
             mouseClicked = False
             return
+
 def scoreint():
     """Returns the player score"""
     if gamemode == "arcade":
-        return ((player.hp*100000/(time_game_finished-time_game_begun)+(kills*100))/dif)
+        return ((player.hp*100000/(time_game_finished-time_game_begun)+((kills+lastkills)*100))/dif)
     elif gamemode == "survival":
         return (time_game_finished-time_game_begun)/1000
     
@@ -671,6 +703,11 @@ def play(): #main game loop
     global dt
     global nowtime
     global dtmod
+
+    global levelwait
+    global lastkills
+    global leveltimechange
+    
     nowtime = pygame.time.get_ticks()
     prevtime = pygame.time.get_ticks()
     dtmod = 16 #16 is 1000/60, hence, the amount of miliseconds between one frame and another in 60fps
@@ -683,6 +720,9 @@ def play(): #main game loop
     game_finish = 0
     boss_spawned = False
     kills = 0
+    lastkills = 0
+    levelwait = 0
+    leveltimechange = 0
     cleargroup(everything)
     while True:
         nowtime = pygame.time.get_ticks()
@@ -718,8 +758,9 @@ def play(): #main game loop
             player_shot_delay = player_rof
         player_shot_delay -= dt/dtmod
         draw()
-        if not boss_spawned:
-            spawn()
+        levelmechanics()
+        if not boss_spawned and levelwait <= 0:
+            spawn(level)
         for shipt in enemy_list:
             if shipt.hp < 1:
                 kills += 1
