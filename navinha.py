@@ -41,7 +41,8 @@ bg = pygame.image.load('BG.jpg')
 playerImg = pygame.image.load('player_ship.png')
 playershotImg = pygame.image.load('player_shot.png')
 bossImg = pygame.image.load('bigboss.png')
-radial_shot = pygame.image.load('boss_radial_shot.png')
+boss_shotImg = pygame.image.load('boss_shot.png')
+radial_shotImg = pygame.image.load('boss_radial_shot.png')
 straight_shotImg = pygame.image.load('straight_shot.png')
 whip_shotImg = pygame.image.load('whip_shot.png')
 wave_shotImg = pygame.image.load('wave_shot.png')
@@ -81,6 +82,9 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         self.rect.x = x
         self.rect.y = y
         self.cont = 0
+        if self.type == 'whip':
+            self.direction_toggle = randint(0,1)#Controls the direction of spinning on whip shots
+            
         if self.team == 'red':
             enemy_shots.add(self)
         else:
@@ -96,15 +100,19 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         elif self.type == 'whip':#Circular movement
             self.rect.y += (self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5)*(dt/dtmod)
             self.rect.x += (self.spd*sin(self.cont) - self.spd*cos(self.cont))*(dt/dtmod)
-            self.cont += 0.1*(dt/dtmod)
+            if self.direction_toggle == 1:
+                self.cont += 0.1*(dt/dtmod)
+            else:
+                self.cont -= 0.1*(dt/dtmod)
+            
         elif self.type == 'boss':#Explosive sort of shot
             self.rect.y += self.spd*(dt/dtmod)
-            if self.rect.y > 320: #When it has travelled enough, explodes into 8 more different shots
+            if self.rect.y > 320-self.expl_y: #When it has travelled enough, explodes into 8 more different shots
                 cont = 0
                 for i in range(1,9):
                     spd = (self.spd * cos(cont))*(dt/dtmod)#Each shot speed is controlled by a factor of sine and cosine
                     spdy = (self.spd * sin(cont))*(dt/dtmod)#so that they move diagonally with the correct speed, as to mimic a circle.
-                    instance = shot(self.rect.x,self.rect.y,spd,2/dif,'radial',radial_shot,'red')
+                    instance = shot(self.rect.x,self.rect.y,spd,6/dif,'radial',radial_shotImg,'red')
                     instance.spdy = spdy
                     cont += pi/4 #Variation in degrees between each shot
                 self.kill()#.kill() is a method that comes with the inheritance from pygame.sprite.Sprite, it completely deletes the object
@@ -202,12 +210,13 @@ class boss(ship): #boss has some different patterns, so we created a new object 
     def shoot(self): #works in a way so that the hp affects how the boss attacks.
         if self.hp <= 300:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
+            instance.expl_y = randint(0,80)
         if self.hp <= 220:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd+3,self.shotdmg,'simple',straight_shotImg,self.team)
+            self.maxdelay = 50
         if self.hp <= 180:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,'wave',wave_shotImg,self.team)
+            self.maxdelay = 30
         if self.hp <= 120:
-            instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd-3,self.shotdmg,'whip',whip_shotImg,self.team)
+            self.maxdelay = 10
             
 class explos(pygame.sprite.Sprite): #the class which one calls when it's hp is below 0, creating an explosion where it was
     explode_frame = 0
@@ -399,9 +408,9 @@ def spawn(level): #controls where and when will the enemies appear
     if level >= 4 and boss_spawned == False and (leveltimechange - time) % 30000 <= 17: #if a certain time has passed, the boss has not appeared, and it's on the right level, make him appear
         boss_spawned = True
         if randint(0,1) == 1:
-            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,straight_shotImg,"red")
+            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,boss_shotImg,"red")
         else:
-            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,straight_shotImg,"red")
+            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,boss_shotImg,"red")
             
 def levelmechanics(): 
     global level
@@ -416,7 +425,6 @@ def levelmechanics():
             kills = 0
             level += 1
             levelwait = 3000
-            print level
         return
     else:
         return
