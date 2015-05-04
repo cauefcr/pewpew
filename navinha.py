@@ -1,7 +1,7 @@
 import pygame, sys
 from random import randint
 from pygame.locals import *
-from math import sin,cos,pi
+from math import sin,cos,pi,sqrt
 
 pygame.init()
 
@@ -84,7 +84,11 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         self.cont = 0
         if self.type == 'whip':
             self.direction_toggle = randint(0,1)#Controls the direction of spinning on whip shots
-            
+        if self.type == 'aimshot':
+            self.vx = (self.rect.centerx-player.rect.centerx)\
+                      /(sqrt(((self.rect.centerx-player.rect.centerx)**2)+((self.rect.centery-player.rect.centery)**2)))
+            self.vy = (self.rect.centery-player.rect.centery)\
+                      /(sqrt(((self.rect.centerx-player.rect.centerx)**2)+((self.rect.centery-player.rect.centery)**2)))
         if self.team == 'red':
             enemy_shots.add(self)
         else:
@@ -104,7 +108,9 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
                 self.cont += 0.1*(dt/dtmod)
             else:
                 self.cont -= 0.1*(dt/dtmod)
-            
+        elif self.type == 'aimshot':
+            self.rect.x += -self.spd*self.vx*(dt/dtmod)
+            self.rect.y += -self.spd*self.vy*(dt/dtmod)            
         elif self.type == 'boss':#Explosive sort of shot
             self.rect.y += self.spd*(dt/dtmod)
             if self.rect.y > 320-self.expl_y: #When it has travelled enough, explodes into 8 more different shots
