@@ -20,7 +20,7 @@ pygame.display.set_caption("PEW PEW!")
 #set up sound
 pygame.mixer.pre_init(44100,-16,2, 4096)
 pygame.mixer.init()
-endgame_snd = pygame.mixer.Sound('farewell.ogg')
+main_menu_snd = pygame.mixer.Sound('farewell.ogg')
 shot_snd = pygame.mixer.Sound('shot.ogg')
 take_dmg_snd = pygame.mixer.Sound('snare.ogg')
 boss_is_dead_snd = pygame.mixer.Sound('boss_dies.ogg')
@@ -79,6 +79,7 @@ game_finish = 0
 time_game_begun = 0
 time_game_finished = 0
 level = 4
+main_menu_music = False
 
 #groups that will contain every object in the game
 enemy_list = pygame.sprite.Group()
@@ -101,17 +102,19 @@ boss_spawned = False
 ######################## Classes Setup #########################
 ###########################=========############################
 class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will create with their shoot() method
-    def __init__(self,x,y,spd,dmg,type,sprite,team):
-        pygame.sprite.Sprite.__init__(self)
-        self.spd = spd
-        self.dmg = dmg
-        self.type = type
+    def __init__(self,x,y,spd,dmg,type1,sprite,team):
+        pygame.sprite.Sprite.__init__(self)#Required for sprite objects as per pygame syntax
         self.image = sprite
-        self.team = team
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.cont = 0
+        self.spd = spd
+        self.dmg = dmg
+        self.type = type1
+        
+        self.team = team
+
+        self.cont = 0 #Cont is used by shots that have constantly variating sine/cosine
         if self.type == 'whip':
             self.direction_toggle = randint(0,1)#Controls the direction of spinning on whip shots
             
@@ -124,10 +127,11 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
         else:
             player_shots.add(self)
         shot_snd.play()
-    def move(self): #defines how each type of shot will move, each ship has a different type.
+    def move(self):
+        """Method used to define how each type of shot will move, each ship has a different type"""
         if self.type == 'simple':
-            self.rect.y += self.spd*(dt/dtmod)
-            
+            self.rect.y += self.spd*(dt/dtmod)#(dt/dtmod) is the solution to low fps, making the game run based on time
+                                              # It is further explained in the play() loop
         elif self.type == 'wave':#Sine-like movement
             self.rect.y += self.spd*(dt/dtmod)
             self.rect.x += (self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont))*(dt/dtmod)
@@ -145,7 +149,7 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
             self.rect.x += self.spd*cos(self.radians)*(dt/dtmod)
             self.rect.y += self.spd*sin(self.radians)*(dt/dtmod)
             
-        elif self.type == 'boss':#Explosive sort of shot
+        elif self.type == 'explosive':#Explosive sort of shot
             self.rect.y += self.spd*(dt/dtmod)
             if self.rect.y > 320-self.expl_y: #When it has travelled enough, explodes into 8 more different shots
                 cont = 0
@@ -156,22 +160,22 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
                     instance.spdy = spdy
                     cont += pi/4 #Variation in degrees between each shot
                 self.kill()#.kill() is a method that comes with the inheritance from pygame.sprite.Sprite, it completely deletes the object
-        elif self.type == 'radial':
-            self.rect.y += self.spdy*(dt/dtmod)
+        elif self.type == 'radial':#Shot created by the explosive shot
+            self.rect.y += self.spdy*(dt/dtmod)#Moves based on the variation of cosine and sine
             self.rect.x += self.spd*(dt/dtmod)
     
 class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main class that represents all space-ships in the game.
     state = 'hunting'
     def __init__(self,x,y,hp,spd,shotspd,shotdmg,shottype,delay,sprite,spriteshot,team):
         pygame.sprite.Sprite.__init__(self)
-        self.image = sprite
-        self.rect = self.image.get_rect()
-        self.rect.x = x
+        self.image = sprite #Stores the image from the sprite
+        self.rect = self.image.get_rect() #Accomodates a rectangle of the same size as the sprite, will be used for collision and boundary checks
+        self.rect.x = x #Sprite's position
         self.rect.y = y
-        self.hp = hp
+        self.hp = hp #Hull points, the amount of damage it can sustain before exploding
         #variables that control the movement
-        self.spd = 0
-        self.maxspd = spd
+        self.spd = 0 #variable that controls momentum / current speed
+        self.maxspd = spd #max speed
         self.accel = spd/5
         #variables that store the shot information
         self.shotspd = shotspd
@@ -193,18 +197,23 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
         else:
             self.position = 'right'
 
-    def shoot(self): #creates an shot object based on the ship's current position and which one is it
-        if self.team == 'red':
+    def shoot(self):
+        """Creates an shot object based on the ship's current position and which one is it"""
+        if self.team == 'red':#Enemy shots are created below their sprite, since they move downwards
             instance = shot(self.rect.midbottom[0],self.rect.midbottom[1],self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
-        else:
+        else:#Player shots are created above the player sprite.
             instance = shot(self.rect.midtop[0]-6,self.rect.midtop[1]-8,self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
 
     def takedamage(self,shotdmg):
+        """Deals damage to the objects that is calling this method, whereas shotdmg is the damage dealt"""
         self.hp -= shotdmg
-        if self.team == 'red':
+        if self.team == 'red':#Only changes the state if its an enemy
             self.state = 'fleeing'
+        else:
+            take_dmg_snd.play()#Only plays the sound if the player takes damage
         
-    def aimov(self): #uses states as the mean of choosing how the AI ships will move
+    def aimov(self):
+        """Uses states as the mean of choosing how the AI ships will move"""
         if self.state == "hunting": #follows the player
             if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 \
                and self.spd <= self.maxspd:
@@ -227,18 +236,20 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
                 self.spd += self.accel*(dt/dtmod)
         self.rect.x += self.spd
             
-    def aishoot(self): #the method which is used for controlling shot spawns, and only if it's an member of the AI team
-        if self.team == "red":
-            self.delay -= dt/dtmod
+    def aishoot(self):
+        """The method which is used for controlling the AI's shot pattern"""
+        self.delay -= dt/dtmod
         if self.delay <= 0:
                 self.shoot()
                 self.delay = self.maxdelay
 
     def ai(self):
+        """The AI of the object """
         self.aishoot()
         self.aimov()
         
-    def explode(self): #method called when the ship dies, which plays the sound and creates an object explosion, where the ship was
+    def explode(self):
+        """Method called when the ship dies, which plays the sound and creates an object explosion, where the ship was"""
         exploding_snd.play()
         self.exploding = True
         instance = explos(self.rect.x-self.rect.width,self.rect.y-self.rect.height)
@@ -263,7 +274,7 @@ class boss(ship): #boss has some different patterns, so we created a new object 
             self.spd -= self.accel*(dt/dtmod)
             self.rect.x += self.spd/4
         self.rect.x += self.spd
-    def shoot(self): #works in a way so that the hp affects how the boss attacks.
+    def shoot(self): #works in a way so that the hp affects how often the boss attacks.
         if self.hp <= 300:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
             instance.expl_y = randint(0,80)
@@ -274,7 +285,7 @@ class boss(ship): #boss has some different patterns, so we created a new object 
         if self.hp <= 120:
             self.maxdelay = 30
 
-class fastguy(ship): #A quick enemy who bounces repeatedly from one side to the other and then stops to fire at the player.
+class fastguy(ship): #A quick enemy who bounces repeatedly from one side of the screen to the other and then stops to fire at the player.
     state = 'moving'
     bounces = randint(1,3) #The amount of times the ship has to bounce from either edges of the screen to stop and shoot
     shotcount = 10 #The amount of shots the ship will fire until it gets back to moving.
@@ -327,10 +338,10 @@ class fastguy(ship): #A quick enemy who bounces repeatedly from one side to the 
                 self.moveleft()
             else:
                 self.moveright()
-        if self.state == 'shooting':
+        elif self.state == 'shooting':
             self.aishoot()
     
-class explos(pygame.sprite.Sprite): #the class which one calls when its hp is below 0, creating an explosion where it was
+class explos(pygame.sprite.Sprite): #The class which one calls when its hp is below 0, creating an explosion where it was
     explode_frame = 0
     explodeimg = [ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14]#List containing all sprites for the explosion
     def __init__(self,x,y,sprite=ex1):#Always sets the first sprite of the explosion automatically
@@ -353,7 +364,8 @@ class explos(pygame.sprite.Sprite): #the class which one calls when its hp is be
 ############################========############################
 ######################## Game mechanics ########################
 ###########################=========############################
-def draw(): #calls the surface drawing functions, and updates the screen
+def draw():
+    """Calls the surface drawing functions, and updates the screen"""
     global levelwait
     DISPLAYSURF.blit(bg,(0,0))
     #DISPLAYSURF2.blit(font.render("FPS " + str(fpsClock.get_fps()), True, WHITE),(font.size("FPS" + str(fpsClock.get_fps()))[0]/8, font.size("FPS" + str(fpsClock.get_fps()))[1]))
@@ -362,36 +374,40 @@ def draw(): #calls the surface drawing functions, and updates the screen
         DISPLAYSURF2.blit(font.render("Level " + str(level), True, WHITE),(font.size("Level" + str(level))[0]/8, graphheight - font.size("Level" + str(level))[1]))
     drawships(enemy_list)
     drawships(player_list)
-    drawshots()
+    drawshots(enemy_shots,player_list)
+    drawshots(player_shots,enemy_list)#Player shots are drawn after the enemy's so that if they overlap, the player's is the one visible
     drawexplosions()
     drawhp()
     pygame.display.update()
     
-def drawhp(): #draws the hp bar for the boss and the player
+def drawhp():
+    """Draws the hp bar for the boss and the player"""
     if boss_spawned == True \
         and (bigboss.rect.x >= -bigboss.rect.width/2 \
         and bigboss.rect.x <= graphwidth-bigboss.rect.width/2):
         pygame.draw.rect(DISPLAYSURF, RED,(0,0,((graphwidth*bigboss.hp)/300),5))#boss                                      
     pygame.draw.rect(DISPLAYSURF, GREEN, (0,graphheight-5,(graphwidth*player.hp)/100,graphheight)) #player
 
-def drawships(shipt): #draws all the different ships in a given list
+def drawships(shipt):
+    """Draws all the different ships in a given list"""
     for i in shipt:
         DISPLAYSURF.blit(i.image, (i.rect.x, i.rect.y))#DISPLAYSURF.blit draws the given image on the given coordinates
 
-def drawshots():  #draws all the shots and checks collision 
-    for shot in enemy_shots:#Draws and checks collision with all enemy shots first
+def drawshots(shots_group,opposing_group):
+    """Draws all the shots and checks collision"""
+    for shot in shots_group:
         oldy = shot.rect.centery
         oldx = shot.rect.centerx#Stores the shot position before moving
         shot.move()
         newy = shot.rect.centery#Stores the shot position after moving
         newx = shot.rect.centerx
 
-        if oldy - newy <=0:#Accomodates the code for the case the variation is reversed
+        if oldy - newy <=0:#Accomodates the code in case the variation is reversed
             yvariation = range(oldy,newy+1)
         else:
             yvariation = range(newy,oldy+1)#Will create a list with the trajectory of the shot for both axis
         if oldx - newx <= 0:
-            xvariation = range(oldx,newx+1)
+            xvariation = range(oldx,newx+1)#This means, all positions the shot has technically gone through.
         else:
             xvariation = range(newx,oldx+1)
         
@@ -401,8 +417,8 @@ def drawshots():  #draws all the shots and checks collision
             shot.kill()
             continue
         
-        for ship in player_list:
-            x_is_true = False#Booleans used to check whether the shot has collided on the given axis
+        for ship in opposing_group:
+            x_is_true = False #Booleans used to check whether the shot has collided on the given axis
             y_is_true = False
             for number in xvariation:#Iterates through all values of the variation
                 if number in range(ship.rect.left,ship.rect.right):#and checks if any of them has gone inside the collision box for the ship
@@ -414,56 +430,22 @@ def drawshots():  #draws all the shots and checks collision
                     break
             if y_is_true and x_is_true: #If there has been collision on both axis, then the shot has collided.
                 ship.takedamage(shot.dmg)#Deals damage to the ship hull points based on the damage value of the shot
-                take_dmg_snd.play()
                 shot.kill()#finally, deletes it.
         
-    for shot in player_shots:#Does the same cycle, but for the player shots now.
-        oldy = shot.rect.centery
-        oldx = shot.rect.centerx
-        shot.move()
-        newy = shot.rect.centery#It's important to draw the player shots after the enemies' as to keep them always in view
-        newx = shot.rect.centerx#since its being drawn after the enemy shots, the player shots will be 'on top' of the enemy shots.
-
-        if oldy - newy <=0:
-            yvariation = range(oldy,newy+1)
-        else:
-            yvariation = range(newy,oldy+1)
-        if oldx - newx <= 0:
-            xvariation = range(oldx,newx+1)
-        else:
-            xvariation = range(newx,oldx+1)
-        
-
-        DISPLAYSURF.blit(shot.image, (shot.rect.x, shot.rect.y))
-        if shot.rect.centery not in range(0,graphheight)\
-           or shot.rect.centerx not in range(0,graphwidth): #shot collision check with the enemies
-            shot.kill()
-            continue
-        for ship in enemy_list:
-            x_is_true = False
-            y_is_true = False
-            for number in xvariation:
-                if number in range(ship.rect.left,ship.rect.right):
-                    x_is_true = True
-                    break
-            for number in yvariation:
-                if number in range(ship.rect.top,ship.rect.bottom):
-                    y_is_true = True
-                    break
-            if y_is_true and x_is_true:
-                ship.takedamage(shot.dmg)
-                shot.kill()
                 
-def cleargroup(group): #cleaning 
+def cleargroup(group):
+    """Deletes every object in the game."""
     for i in group:
-        for j in i:#Deletes every object in the game.
+        for j in i:
             j.kill()
 
-def drawexplosions(): #draws all the explosions
+def drawexplosions():
+    """Draws all the explosions"""
     for explosion in explosions:
         DISPLAYSURF.blit(explosion.image, (explosion.rect.x, explosion.rect.y))
 
-def spawn(level): #controls where and when will the enemies appear
+def spawn(level):
+    """Controls where and when will the enemies appear"""
     time = pygame.time.get_ticks() + 30 #gets time after pygame.init was called, in ms
     global boss_spawned
     global bigboss #bigboss has to be global so that bigboss.hp and .x/.y may be checked along the code
@@ -478,27 +460,26 @@ def spawn(level): #controls where and when will the enemies appear
             elif spawnrand == 2:
                 mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 3:
-                #mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
-                mob3 = fastguy(graphwidth+30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob3Img,whip_shotImg,'red')
+                mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
+                #mob4 = fastguy(graphwidth+30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob3Img,whip_shotImg,'red')
         else:
             if level < 4:
                 spawnrand = randint(1,level)
             else:
                 spawnrand = randint(1,3)
-            if spawnrand == 1:
-                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
+            if spawnrand == 1:                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
             elif spawnrand == 2:
                 mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 3:
-                #mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
-                mob3 = fastguy(-30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob3Img,whip_shotImg,'red')
+                mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
+                #mob4 = fastguy(-30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob3Img,whip_shotImg,'red')
                 
     if level >= 4 and boss_spawned == False and (leveltimechange - time) % 30000 <= dt: #if a certain time has passed, the boss has not appeared, and it's on the right level, make him appear
         boss_spawned = True
         if randint(0,1) == 1:
-            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'boss',70,bossImg,boss_shotImg,"red")
+            bigboss = boss(graphwidth/2+90,-22,300,5,4,10/dif,'explosive',70,bossImg,boss_shotImg,"red")
         else:
-            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'boss',70,bossImg,boss_shotImg,"red")
+            bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'explosive',70,bossImg,boss_shotImg,"red")
             
 def levelmechanics(): 
     global level
@@ -733,7 +714,7 @@ def choosemode():
             return
 
 def scoreint():
-    """Returns the player score"""
+    """Returns the player score based on the game mode"""
     if gamemode == "arcade":
         return ((player.hp*100000/(time_game_finished-time_game_begun)+((kills+lastkills)*100))/dif)
     elif gamemode == "survival":
@@ -741,7 +722,10 @@ def scoreint():
     
 def menu(): #main menu
     pygame.mouse.set_visible(1)
-    endgame_snd.play()
+    global main_menu_music
+    if not main_menu_music:
+        main_menu_snd.play(-1)#Begins playing the main menu music. -1 as an argument means it loops indefinitely or until stopped.
+        main_menu_music = True #Boolean used to check if main_menu is already playing, as to avoid multiple instances.
     global dif
     global mousex
     global mousey
@@ -778,9 +762,6 @@ def menu(): #main menu
             return
 
 def play(): #main game loop
-    endgame_snd.fadeout(1000)
-    pygame.mouse.set_visible(0)
-    ost_snd.play()
     global mousex
     global mousey
     global mouseClicked
@@ -789,6 +770,7 @@ def play(): #main game loop
     global game_finish
     global time_game_finished
     global time_game_begun
+    global main_menu_music
 
     global kills
     global boss_spawned
@@ -800,6 +782,12 @@ def play(): #main game loop
     global levelwait
     global lastkills
     global leveltimechange
+    
+    endgame_snd.fadeout(1000)#Fadeouts the main-menu music during 1 second
+    main_menu_music = False
+    pygame.mouse.set_visible(0)
+    ost_snd.play(-1)
+    
     
     nowtime = pygame.time.get_ticks()
     prevtime = pygame.time.get_ticks()
@@ -825,6 +813,7 @@ def play(): #main game loop
         if time_game_finished != 0:  
             if pygame.time.get_ticks() - time_game_finished > 2000:
                 endgame(scoreint())
+                ost_snd.fadeout(1000)
                 return
         if player.hp <= 0 and game_finish == 0:
             game_finish = 1
@@ -836,22 +825,22 @@ def play(): #main game loop
             boss_spawned = False
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                pygame.quit()
+                pygame.quit()#Pressing the up and escape keys at the same time will quit the game.
                 sys.exit()
-            elif event.type == MOUSEMOTION:
+            elif event.type == MOUSEMOTION:#Handles the mouse movement
                 mousex, mousey = event.pos
             elif event.type == MOUSEBUTTONUP:
-                mousex, mousey = event.pos
+                mousex, mousey = event.pos #When the mouse buttom is released, it causes mouseClicked to be False.
                 mouseClicked = False
-            elif event.type == MOUSEBUTTONDOWN:
+            elif event.type == MOUSEBUTTONDOWN: #While the mouse buttom is pressed, mouse(is)Clicked.
                 mousex, mousey = event.pos
                 mouseClicked = True
-        if mouseClicked == True and player_shot_delay <= 0 and player.hp > 0:
+        if mouseClicked == True and player_shot_delay <= 0 and player.hp > 0: #Checks whether the player is able to shoot
             player.shoot()
-            player_shot_delay = player_rof
-        player_shot_delay -= dt/dtmod
+            player_shot_delay = player_rof#Resets the delay to the original rate of fire.
+        player_shot_delay -= dt/dtmod#Decrements every loop so that if the player stops firing any second, he can always start firing.
         draw()
-        levelmechanics()
+        levelmechanics()#Controls the level mechanics
         if not boss_spawned and levelwait <= 0:
             spawn(level)
         for shipt in enemy_list:
@@ -868,7 +857,7 @@ def play(): #main game loop
                 shipt.rect.y = mousey-shipt.rect.height/2 #Centers the mouse at player's ship
         for explosion in explosions:
             explosion.cycle()
-        fpsClock.tick(FPS)
+        fpsClock.tick(FPS)#Ticks a single frame, serves as a time-controller
 
-while True: #so that even if the game ends, player is taken to the menu after.
+while True: #so that even if the game ends,the player is taken back to the menu after.
     menu()
