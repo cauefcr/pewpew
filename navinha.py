@@ -195,11 +195,9 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
             enemy_list.add(self)
         else:
             player_list.add(self)
-        #Variables that are used with the fastguy ship.
-        if self.rect.centerx < 0:
-            self.position = 'left'
-        else:
-            self.position = 'right'
+        #Positions for the fastguy class
+        #Defines one random point on each third of the screen
+        self.positions = {1:randint(self.rect.width+10,graphwidth/3),2:randint(graphwidth/3,(2*graphwidth)/3),3:randint((2*graphwidth)/3,graphwidth-self.rect.width - 10)}
 
     def shoot(self):
         """Creates an shot object based on the ship's current position and which one is it"""
@@ -289,39 +287,42 @@ class boss(ship): #boss has some different patterns, so we created a new object 
         if self.hp <= 120:
             self.maxdelay = 30
 
-class fastguy(ship): #A quick enemy who bounces repeatedly from one side of the screen to the other and then stops to fire at the player.
+class fastguy(ship): #A quick enemy who bounces repeatedly from one point to the other and then stops to fire at the player.
     state = 'moving'
-    bounces = randint(1,3) #The amount of times the ship has to bounce from either edges of the screen to stop and shoot
     shotcount = 10 #The amount of shots the ship will fire until it gets back to moving.
-
+    nextpos = randint(1,3)
     def takedamage(self,shotdmg): #Overrides previous takedamage() method as to avoid the 'fleeing' state
         self.hp -= shotdmg
 
     def moveleft(self):
-        if self.rect.centerx > 70 and self.spd > -self.maxspd:#Accelerates towards the left edge of the screen
+        if self.rect.centerx > self.positions[self.nextpos]+70 and self.spd > -self.maxspd:#Accelerates towards the next point
             self.spd -= self.accel*(dt/dtmod)
-        if self.rect.centerx <= 70 and self.spd < 0:#Deaccelerates to stop near edge
+        if self.rect.centerx <= self.positions[self.nextpos]+70 and self.spd < 0:#Deaccelerates to stop near the next point
             self.spd += self.accel*(dt/dtmod)
-            if self.spd == 0:
-                self.bounces -= 1
-                self.position = 'left'
-                if self.bounces == 0:
-                    self.state = 'shooting'#When it has bounced enough times, switches to shooting
-                    self.bounces = randint(1,3)#Redefines bounces back to a certain amount
+            if self.spd > 0:#Countermeasure against low-fps, as to avoid spd being left at any value other than 0
+                self.spd = 0
+        if self.spd == 0:
+            self.prevpos = self.nextpos #Saves the current pos
+            self.nextpos = randint(1,3) #Redefines the next random pos
+            while self.nextpos == self.prevpos: #If it's the same as the current pos, retries until it's different.
+                self.nextpos = randint(1,3)
+            self.state = 'shooting'#When it has fully stopped, switch to shooting.
         self.rect.x += self.spd
         self.delay -= dt/dtmod#delay is always decremented from so the next time the ship stops, it can always start firing right away
 
-    def moveright(self):
-        if self.rect.centerx < graphwidth - 70 and self.spd < self.maxspd:
+    def moveright(self):#Same thing as above but assumes the next position is to the right
+        if self.rect.centerx < self.positions[self.nextpos]-70 and self.spd < self.maxspd:
             self.spd += self.accel*(dt/dtmod)
-        if self.rect.centerx >= graphwidth - 70 and self.spd > 0:
+        if self.rect.centerx >= self.positions[self.nextpos]-70 and self.spd > 0:
             self.spd -= self.accel*(dt/dtmod)
-            if self.spd == 0:
-                self.bounces -= 1
-                self.position = 'right'
-                if self.bounces == 0:
-                    self.state = 'shooting'
-                    self.bounces = randint(1,3)
+            if self.spd < 0:
+                self.spd = 0
+        if self.spd == 0:
+            self.prevpos = self.nextpos
+            self.nextpos = randint(1,3)
+            while self.nextpos == self.prevpos:
+                self.nextpos = randint(1,3)
+            self.state = 'shooting'#When it has bounced enough times, switches to shooting
         self.rect.x += self.spd
         self.delay -= dt/dtmod
 
@@ -338,13 +339,13 @@ class fastguy(ship): #A quick enemy who bounces repeatedly from one side of the 
 
     def ai(self):
         if self.state == 'moving':
-            if self.position == 'right':     #A simple finite state machine responsible for the AI
+            if self.rect.centerx >= self.positions[self.nextpos]:     #A simple finite state machine responsible for the AI
                 self.moveleft()
             else:
                 self.moveright()
         elif self.state == 'shooting':
             self.aishoot()
-    
+            
 class explos(pygame.sprite.Sprite): #The class which one calls when its hp is below 0, creating an explosion where it was
     explode_frame = 0
     explodeimg = [ex2,ex3,ex4,ex5,ex6,ex7,ex8,ex9,ex10,ex11,ex12,ex13,ex14]#List containing all sprites for the explosion
@@ -813,6 +814,10 @@ def play(): #main game loop
     boss_spawned = False
     
     kills = 0
+    if gamemode == 'arcade':
+        level = 1
+    else:
+        level = 4
     lastkills = 0
     levelwait = 3000 #timer so that the level is displayed when the game starts
     leveltimechange = 0
