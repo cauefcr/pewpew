@@ -52,6 +52,7 @@ radial_shotImg = pygame.image.load('shot_boss_radial.png')
 straight_shotImg = pygame.image.load('shot_straight.png')
 whip_shotImg = pygame.image.load('shot_whip.png')
 wave_shotImg = pygame.image.load('shot_wave.png')
+aimed_shotImg = pygame.image.load('shot_aimed.png')
 mob1Img = pygame.image.load('mob1.png')
 mob2Img = pygame.image.load('mob2.png')
 mob3Img = pygame.image.load('mob3.png')
@@ -467,7 +468,7 @@ def spawn(level):
             elif spawnrand == 3:
                 mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
             elif spawnrand == 5:
-                mob4 = fastguy(graphwidth+30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob4Img,whip_shotImg,'red')
+                mob4 = fastguy(graphwidth+30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob4Img,aimed_shotImg,'red')
         else:
             if level < 5: #may have more levels later
                 spawnrand = randint(1,level)
@@ -480,7 +481,7 @@ def spawn(level):
             elif spawnrand == 3:
                 mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
             elif spawnrand == 4:
-                mob4 = fastguy(-30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob4Img,whip_shotImg,'red')
+                mob4 = fastguy(-30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob4Img,aimed_shotImg,'red')
                 
     if level >= 4 and boss_spawned == False and (leveltimechange - time) % 30000 <= dt: #if a certain time has passed, the boss has not appeared, and it's on the right level, make him appear
         boss_spawned = True
