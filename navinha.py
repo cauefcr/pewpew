@@ -7,8 +7,13 @@ from math import sin,cos,pi
 pygame.init()
 
 from score import *
+#set up icon
+icon=pygame.Surface((32,32))
+icon.set_colorkey((0,0,0))
+rawicon=pygame.image.load('icon.png')
+pygame.display.set_icon(icon)
 
-# set up the display
+#set up the display
 FPS = 60
 fpsClock = pygame.time.Clock()
 graphwidth = 640
@@ -50,7 +55,7 @@ wave_shotImg = pygame.image.load('shot_wave.png')
 mob1Img = pygame.image.load('mob1.png')
 mob2Img = pygame.image.load('mob2.png')
 mob3Img = pygame.image.load('mob3.png')
-
+mob4Img = pygame.image.load('mob4.png')
 
 #explosions
 ex1 = pygame.image.load('explosion1.png')
@@ -69,7 +74,7 @@ ex13 = pygame.image.load('explosion13.png')
 ex14 = pygame.image.load('explosion14.png')
 
 
-#set up the variables
+##set up the variables
 #mouse variables
 mousex = 0
 mousey = 0
@@ -451,7 +456,7 @@ def spawn(level):
     global bigboss #bigboss has to be global so that bigboss.hp and .x/.y may be checked along the code
     if (time - time_game_begun) % (1000 + (1000*dif)) < dt: #spawn random mobs, from either left or right
         if randint(-1,1) == 1:
-            if level < 4:
+            if level < 5:
                 spawnrand = randint(1,level)
             else:
                 spawnrand = randint(1,3)
@@ -461,18 +466,21 @@ def spawn(level):
                 mob2 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 3:
                 mob3 = ship(graphwidth+30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
-                #mob4 = fastguy(graphwidth+30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob3Img,whip_shotImg,'red')
+            elif spawnrand == 5:
+                mob4 = fastguy(graphwidth+30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob4Img,whip_shotImg,'red')
         else:
-            if level < 4:
+            if level < 5: #may have more levels later
                 spawnrand = randint(1,level)
             else:
                 spawnrand = randint(1,3)
-            if spawnrand == 1:                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
+            if spawnrand == 1:
+                mob1 = ship(-30,randint(15,graphheight/3),20,6,3,7/dif,'simple',20,mob1Img,straight_shotImg,"red")
             elif spawnrand == 2:
                 mob2 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'wave',30,mob2Img,wave_shotImg,'red')
             elif spawnrand == 3:
                 mob3 = ship(-30,randint(15,graphheight/3),20,5,3,7/dif,'whip',25,mob3Img,whip_shotImg,'red')
-                #mob4 = fastguy(-30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob3Img,whip_shotImg,'red')
+            elif spawnrand == 4:
+                mob4 = fastguy(-30,randint(15,graphheight/3),20,10,8,7/dif,'aimshot',10,mob4Img,whip_shotImg,'red')
                 
     if level >= 4 and boss_spawned == False and (leveltimechange - time) % 30000 <= dt: #if a certain time has passed, the boss has not appeared, and it's on the right level, make him appear
         boss_spawned = True
@@ -481,13 +489,14 @@ def spawn(level):
         else:
             bigboss = boss(graphwidth/2-90,-22,300,5,4,10/dif,'explosive',70,bossImg,boss_shotImg,"red")
             
-def levelmechanics(): 
+def levelmechanics():
+    """Handles level transitions and wait time for it"""
     global level
     global levelwait
     global lastkills
     global leveltimechange
     global kills
-    if gamemode == "arcade" and level <= 4:
+    if gamemode == "arcade" and level < 4:
         if kills >= 15 or pygame.time.get_ticks() - leveltimechange >= 120000:
             leveltimechange = pygame.time.get_ticks()
             lastkills += kills
@@ -499,7 +508,8 @@ def levelmechanics():
 ###########################=========############################
 ###########################  Menus  ############################
 ###########################=========############################
-def inprint(inputs,scoreint): #ui for high-score name input
+def inprint(inputs,scoreint):
+    """ui for high-score name input"""
     global namestr
     global font
     DISPLAYSURF2.fill(BLACK)
@@ -507,7 +517,8 @@ def inprint(inputs,scoreint): #ui for high-score name input
     DISPLAYSURF2.blit(font.render("Type your name: " + inputs,True, WHITE),(graphwidth/2-(font.size("Type your name: " + inputs)[0])/2,(graphheight/2)+(font.size("Type your name: " + inputs)[1])/2))
     pygame.display.update()
 
-def prnt(dicti): #ui for showing high-scores
+def prnt(dicti):
+    """ui for showing high-scores"""
     DISPLAYSURF2.fill(BLACK)
     height = graphheight/1.6
     for dicto in dicti:
@@ -523,7 +534,8 @@ def prnt(dicti): #ui for showing high-scores
             height += (font.size(dicto[key])[1])
     pygame.display.update()
 
-def endgame(scoreint): #loop that holds what happens after either you or the boss died
+def endgame(scoreint):
+    """loop that holds what happens after either you or the boss died"""
     name = []#stores all the letters the user types, one by one.
     namestr = ''#empty string, will store the final name as typed by the player.
     inprint(namestr, scoreint)
@@ -783,11 +795,10 @@ def play(): #main game loop
     global lastkills
     global leveltimechange
     
-    endgame_snd.fadeout(1000)#Fadeouts the main-menu music during 1 second
+    main_menu_snd.fadeout(1000)#Fadeouts the main-menu music during 1 second
     main_menu_music = False
     pygame.mouse.set_visible(0)
     ost_snd.play(-1)
-    
     
     nowtime = pygame.time.get_ticks()
     prevtime = pygame.time.get_ticks()
@@ -802,7 +813,7 @@ def play(): #main game loop
     boss_spawned = False
     kills = 0
     lastkills = 0
-    levelwait = 0
+    levelwait = 3000
     leveltimechange = 0
     cleargroup(everything)
     while True:
