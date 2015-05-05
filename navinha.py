@@ -83,7 +83,6 @@ mouseClicked = False
 game_finish = 0
 time_game_begun = 0
 time_game_finished = 0
-level = 4
 main_menu_music = False
 
 #groups that will contain every object in the game
@@ -497,18 +496,18 @@ def levelmechanics():
     global leveltimechange
     global kills
     if gamemode == "arcade" and level < 4:
-        if kills >= 15 or pygame.time.get_ticks() - leveltimechange >= 120000:
-            leveltimechange = pygame.time.get_ticks()
+        if kills >= 15 or pygame.time.get_ticks() - leveltimechange >= 120000: #changes the level if the player has killed at least 15 mobs or if 2 minutes have passed
+            leveltimechange = pygame.time.get_ticks() #resets the level timer
             lastkills += kills
-            kills = 0
+            kills = 0 #saves the kills on laskills and resets the current kills
             level += 1
-            levelwait = 3000
+            levelwait = 3000 #sets the level changing timer to 3s
 
 
 ###########################=========############################
 ###########################  Menus  ############################
 ###########################=========############################
-def inprint(inputs,scoreint):
+def inprint(inputs,scoreint): #centered print
     """ui for high-score name input"""
     global namestr
     global font
@@ -517,17 +516,17 @@ def inprint(inputs,scoreint):
     DISPLAYSURF2.blit(font.render("Type your name: " + inputs,True, WHITE),(graphwidth/2-(font.size("Type your name: " + inputs)[0])/2,(graphheight/2)+(font.size("Type your name: " + inputs)[1])/2))
     pygame.display.update()
 
-def prnt(dicti):
+def prnt(dicti): #shows the highscore, centered
     """ui for showing high-scores"""
-    DISPLAYSURF2.fill(BLACK)
-    height = graphheight/1.6
-    for dicto in dicti:
+    DISPLAYSURF2.fill(BLACK) #clears the screen
+    height = graphheight/1.6 
+    for dicto in dicti: #gets the heights of all the scores, based on the graphheight
         for key in dicto:
             height -= (font.size(dicto[key])[1])/2
-    height -= font.size("High scores:")[1]
+    height -= font.size("High scores:")[1] 
     DISPLAYSURF2.blit(font.render("High scores:",True, WHITE),(graphwidth/2-(font.size("High scores:")[0])/2,height-(font.size("High scores:")[1])/2))
     height += font.size("High scores:")[1]
-    for dicto in dicti:
+    for dicto in dicti: #starts printing the scores, and change the height in which the next score will be printed
         for key in dicto:
             string = str(key) + ": " + str(dicto[key])
             DISPLAYSURF2.blit(font.render(string,True, WHITE),(graphwidth/2-(font.size(string)[0])/2,height-(font.size(string)[1])/2))
@@ -540,7 +539,7 @@ def endgame(scoreint):
     namestr = ''#empty string, will store the final name as typed by the player.
     inprint(namestr, scoreint)
     if gamemode == "arcade":
-        scorefile = "Scores.txt"
+        scorefile = "Scores.txt" #will call get and setscore based on the text file here defined
     elif gamemode == "survival":
         scorefile = "SurScores.txt"
     while True:
@@ -552,21 +551,21 @@ def endgame(scoreint):
                 if event.key != K_RETURN and event.key != K_BACKSPACE and event.key != K_MINUS and event.key != K_KP_MINUS:
                     name.append(pygame.key.name(event.key))
                 if event.key == K_BACKSPACE and len(name)>0:
-                    name.pop() 
+                    name.pop() #removes the last item on the list, if the player presses backspace
                 for i in name:
                     namestr += i
-                inprint(namestr,scoreint)
-                namestr = ''
+                inprint(namestr,scoreint) #calls the print function, with the current string
+                namestr = '' #clears the string, so it can be filled again, with the most recent input
                 if event.key == K_RETURN and len(name)>=0:
                     for i in name: #calls setscore and shows the highscore
                         namestr += i #concatenates every letter in name to a single string
-                    score.setScore(namestr, scoreint, scorefile)
-                    prnt(score.getScore(scorefile))
-                    pygame.time.delay(3600)
-                    ost_snd.fadeout(1000)
+                    score.setScore(namestr, scoreint, scorefile) #adds the player name, and the score to the right file
+                    prnt(score.getScore(scorefile))#shows the highscore
+                    pygame.time.delay(3600)#waits 3.6 seconds
+                    ost_snd.fadeout(1000)#finishes the song
                     return
 
-def choiceprint(topstr,midstr,botstr):
+def choiceprint(topstr,midstr,botstr): #funtion for general printing of 3 centered strings
     """Draws 3 strings, centered"""
     DISPLAYSURF2.blit(font.render(topstr, True, WHITE),(graphwidth/2 - font.size(topstr)[0]/2, graphheight/2 - font.size(topstr)[1]))
     DISPLAYSURF2.blit(font.render(midstr, True, WHITE),(graphwidth/2 - font.size(midstr)[0]/2, graphheight/2))
@@ -597,7 +596,7 @@ def choosedif():
     mouseClicked = False
     while True:
         DISPLAYSURF2.blit(font.render("Back", True, WHITE),(font.size("Back")[0]/8, graphheight - font.size("Back")[1]))
-        choiceprint("Easy","Medium","Hard")
+        choiceprint("Easy","Medium","Hard") #calls the above mentioned function, so that it draws, from top to bottom, easy, medium and hard
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 pygame.quit()
@@ -612,7 +611,7 @@ def choosedif():
                 mouseClicked = False
         if mousey in choicepos("Easy","top")[1] \
            and mousex in choicepos("Easy","top")[0]\
-           and mouseClicked == True:
+           and mouseClicked == True: #checks if there was a mouse click in the positions of the button
             dif = 3
             mouseClicked = False
             return
@@ -644,7 +643,7 @@ def choosescore():
     mouseClicked = False
     while True:
         DISPLAYSURF2.blit(font.render("Back", True, WHITE),(font.size("Back")[0]/8, graphheight - font.size("Back")[1]))
-        choiceprint("Survival"," ","Arcade")
+        choiceprint("Survival"," ","Arcade") #print survival and arcade, at the centered top and centered bottom positions
         for event in pygame.event.get(): # event handling loop
             if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
                 pygame.quit()
@@ -659,8 +658,8 @@ def choosescore():
                 mouseClicked = False
         if mousey in choicepos("Survival","top")[1] \
            and mousex in choicepos("Survival","top")[0] \
-           and mouseClicked == True:
-            prnt(score.getScore("SurScores.txt"))
+           and mouseClicked == True: #checks if you clicked over the survival text
+            prnt(score.getScore("SurScores.txt")) #calls the print score function
             pygame.time.delay(3600)
             mouseClicked = False
             return
@@ -707,14 +706,15 @@ def choosemode():
            and mouseClicked == True:
             gamemode = 'survival'
             mouseClicked = False
-            return play()
+            level = 4
+            return play() #return to the last fucntion while calling play(), so that the  funtion still exits while moving to the next one
         if mousey in choicepos("Arcade","bot")[1] \
            and mousex in choicepos("Arcade","bot")[0] \
            and mouseClicked == True:
             gamemode = 'arcade'
             mouseClicked = False
             choosedif()
-            if dif != 0:
+            if dif != 0: #checks if the function has not exited by the back button, checking the return given by the dif variable
                 level = 1
                 play()
             dif = 1
@@ -728,12 +728,12 @@ def choosemode():
 def scoreint():
     """Returns the player score based on the game mode"""
     if gamemode == "arcade":
-        return ((player.hp*100000/(time_game_finished-time_game_begun)+((kills+lastkills)*100))/dif)
+        return ((player.hp*100000/(time_game_finished-time_game_begun)+((kills+lastkills)*100))/dif) #as kills are used for level changing, they are saved on laskills, and must be added to the score
     elif gamemode == "survival":
         return (time_game_finished-time_game_begun)/1000
     
 def menu(): #main menu
-    pygame.mouse.set_visible(1)
+    pygame.mouse.set_visible(1) #makes sure that the mouse is visible whilst the player is using the menu 
     global main_menu_music
     if not main_menu_music:
         main_menu_snd.play(-1)#Begins playing the main menu music. -1 as an argument means it loops indefinitely or until stopped.
@@ -762,13 +762,13 @@ def menu(): #main menu
                 mouseClicked = False
         if mousey in range(((graphheight/2)+(font.size("START")[1])),(graphheight/2)+(font.size("START")[1]*2)) \
            and mousex in range(graphwidth/2-(font.size("START")[0])/2,graphwidth/2+(font.size("START")[0])/2) \
-           and mouseClicked == True:
+           and mouseClicked == True: #check to see if the player has clicked the text
             mouseClicked = False
             choosemode()
             return 
         if mousey in range(((graphheight/2)+(font.size("HIGHSCORE")[1]*2)),(graphheight/2)+(font.size("HIGHSCORE")[1]*3)) \
            and mousex in range(graphwidth/2-(font.size("HIGHSCORE")[0])/2,graphwidth/2+(font.size("HIGHSCORE")[0])/2) \
-           and mouseClicked == True:
+           and mouseClicked == True: #check to see if the player has clicked the text
             mouseClicked = False
             choosescore()
             return
@@ -794,7 +794,7 @@ def play(): #main game loop
     global levelwait
     global lastkills
     global leveltimechange
-    
+    #clearing or starting the variables used while playing
     main_menu_snd.fadeout(1000)#Fadeouts the main-menu music during 1 second
     main_menu_music = False
     pygame.mouse.set_visible(0)
@@ -811,11 +811,12 @@ def play(): #main game loop
     time_game_finished = 0
     game_finish = 0
     boss_spawned = False
+    
     kills = 0
     lastkills = 0
-    levelwait = 3000
+    levelwait = 3000 #timer so that the level is displayed when the game starts
     leveltimechange = 0
-    cleargroup(everything)
+    cleargroup(everything) #deletes old shots and ships
     while True:
         nowtime = pygame.time.get_ticks()
         dt = nowtime-prevtime #delta time
@@ -852,12 +853,12 @@ def play(): #main game loop
         player_shot_delay -= dt/dtmod#Decrements every loop so that if the player stops firing any second, he can always start firing.
         draw()
         levelmechanics()#Controls the level mechanics
-        if not boss_spawned and levelwait <= 0:
-            spawn(level)
+        if not boss_spawned and levelwait <= 0: #stops spawn if the boss has spawned or if the game is displaying the level
+            spawn(level)#passes the level to the spawn function
         for shipt in enemy_list:
             if shipt.hp < 1:
                 kills += 1
-                shipt.explode()
+                shipt.explode() #calls the explosion method if a ship has died
                 continue
             shipt.ai()
         for shipt in player_list:
@@ -867,8 +868,8 @@ def play(): #main game loop
                 shipt.rect.x = mousex-shipt.rect.width/2
                 shipt.rect.y = mousey-shipt.rect.height/2 #Centers the mouse at player's ship
         for explosion in explosions:
-            explosion.cycle()
-        fpsClock.tick(FPS)#Ticks a single frame, serves as a time-controller
+            explosion.cycle() #cicles the current explosions
+        fpsClock.tick(FPS) #Ticks a single frame, serves as a time-controller
 
 while True: #so that even if the game ends,the player is taken back to the menu after.
     menu()
