@@ -25,14 +25,11 @@ pygame.display.set_caption("PEW PEW!")
 #set up sound
 pygame.mixer.pre_init(44100,-16,2, 4096)
 pygame.mixer.init()
-main_menu_snd = pygame.mixer.Sound('farewell.ogg')
+main_menu_snd = pygame.mixer.Sound('farewell.ogg') 
 shot_snd = pygame.mixer.Sound('shot.ogg')
 take_dmg_snd = pygame.mixer.Sound('snare.ogg')
 boss_is_dead_snd = pygame.mixer.Sound('boss_dies.ogg')
 ost_snd = pygame.mixer.Sound('timbre_-6db.ogg')
-give_dmg_snd = pygame.mixer.Sound('jump.ogg')
-player_died_snd = pygame.mixer.Sound('ghost.ogg')
-game_start_snd = pygame.mixer.Sound('fallingufo.ogg')
 exploding_snd = pygame.mixer.Sound('explosion.ogg')
 
 #set up the colors
@@ -135,27 +132,27 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
     def move(self):
         """Method used to define how each type of shot will move, each ship has a different type"""
         if self.type == 'simple':
-            self.rect.y += self.spd*(dt/dtmod)#(dt/dtmod) is the solution to low fps, making the game run based on time
+            self.rect.y += self.spd*fpsmod*(dt/dtmod)#(dt/dtmod) is the solution to low fps, making the game run based on time
                                               # It is further explained in the play() loop
         elif self.type == 'wave':#Sine-like movement
-            self.rect.y += self.spd*(dt/dtmod)
-            self.rect.x += (self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont))*(dt/dtmod)
-            self.cont += 0.2*(dt/dtmod)
+            self.rect.y += self.spd*fpsmod*(dt/dtmod)
+            self.rect.x += (self.spd*2*sin(self.cont) - self.spd*2*cos(self.cont))*fpsmod*(dt/dtmod)
+            self.cont += 0.2*(dt/dtmod)*fpsmod*(dt/dtmod)
             
         elif self.type == 'whip':#Circular movement
-            self.rect.y += (self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5)*(dt/dtmod)
-            self.rect.x += (self.spd*sin(self.cont) - self.spd*cos(self.cont))*(dt/dtmod)
+            self.rect.y += (self.spd*sin(self.cont) + self.spd*cos(self.cont) + 1.5)*fpsmod*(dt/dtmod)
+            self.rect.x += (self.spd*sin(self.cont) - self.spd*cos(self.cont))*fpsmod*(dt/dtmod)
             if self.direction_toggle == 1:#Controls whether the spin of the projectile is clockwise or anti-clockwise
-                self.cont += 0.1*(dt/dtmod)
+                self.cont += 0.1*fpsmod*(dt/dtmod)
             else:
-                self.cont -= 0.1*(dt/dtmod)
+                self.cont -= 0.1*fpsmod*(dt/dtmod)
                 
         elif self.type == 'aimshot':
-            self.rect.x += self.spd*cos(self.radians)*(dt/dtmod)
-            self.rect.y += self.spd*sin(self.radians)*(dt/dtmod)
+            self.rect.x += self.spd*cos(self.radians)*fpsmod*(dt/dtmod)
+            self.rect.y += self.spd*sin(self.radians)*fpsmod*(dt/dtmod)
             
         elif self.type == 'explosive':#Explosive sort of shot
-            self.rect.y += self.spd*(dt/dtmod)
+            self.rect.y += self.spd*(dt/dtmod)*fpsmod
             if self.rect.y > 320-self.expl_y: #When it has travelled enough, explodes into 8 more different shots
                 cont = 0
                 for i in range(1,9):
@@ -166,8 +163,8 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
                     cont += pi/4 #Variation in degrees between each shot
                 self.kill()#.kill() is a method that comes with the inheritance from pygame.sprite.Sprite, it completely deletes the object
         elif self.type == 'radial':#Shot created by the explosive shot
-            self.rect.y += self.spdy*(dt/dtmod)#Moves based on the variation of cosine and sine
-            self.rect.x += self.spd*(dt/dtmod)
+            self.rect.y += self.spdy*fpsmod#Moves based on the variation of cosine and sine
+            self.rect.x += self.spd*fpsmod
     
 class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main class that represents all space-ships in the game.
     state = 'hunting'
@@ -220,10 +217,10 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
         if self.state == "hunting": #follows the player
             if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 \
                and self.spd <= self.maxspd:
-                self.spd += self.accel*(dt/dtmod)
+                self.spd += self.accel*fpsmod
             elif player.rect.centerx < self.rect.centerx-(self.maxspd+self.rect.width/4) \
                and self.spd > -self.maxspd:
-                self.spd -= self.accel*(dt/dtmod)
+                self.spd -= self.accel*fpsmod
                 
         if self.state == "fleeing": #runs from the player
             if self.rect.centerx not in range(0,graphwidth): #when ship reaches either of the screen edges, go back to hunting
@@ -232,12 +229,12 @@ class ship(pygame.sprite.Sprite): #sets up the ship class, which is the main cla
             if player.rect.centerx > self.rect.centerx \
                and self.rect.centerx in range(0,graphwidth)\
                and self.spd > -self.maxspd:#if the player is to the right of the ship, move towards the left
-                self.spd -= self.accel*(dt/dtmod)
+                self.spd -= self.accel*fpsmod
             elif player.rect.centerx < self.rect.centerx \
                and self.rect.centerx in range(0,graphwidth)\
                and self.spd < self.maxspd:#if its left, move right
-                self.spd += self.accel*(dt/dtmod)
-        self.rect.x += self.spd
+                self.spd += self.accel*fpsmod
+        self.rect.x += self.spd*(dt/dtmod)
             
     def aishoot(self):
         """The method which is used for controlling the AI's shot pattern"""
@@ -271,12 +268,12 @@ class boss(ship): #boss has some different patterns, so we created a new object 
         if self.rect.centery < self.rect.height:#Also never flees. The boss doesn't mind taking some shots
             self.rect.centery += self.accel*(dt/dtmod)
         if player.rect.centerx > self.rect.centerx+self.maxspd+self.rect.width/4 and self.spd <= self.maxspd/2:
-            self.spd += self.accel*(dt/dtmod)
+            self.spd += self.accel*fpsmod
             self.rect.x += self.spd/4
         elif player.rect.centerx < self.rect.centerx-(self.maxspd+self.rect.width/4) and self.spd > -self.maxspd/2:
-            self.spd -= self.accel*(dt/dtmod)
+            self.spd -= self.accel*fpsmod
             self.rect.x += self.spd/4
-        self.rect.x += self.spd
+        self.rect.x += self.spd*(dt/dtmod)
     def shoot(self): #works in a way so that the hp affects how often the boss attacks.
         if self.hp <= 300:
             instance = shot(self.rect.x+(0.8*self.rect.width/2),self.rect.y+(self.rect.height),self.shotspd,self.shotdmg,self.shottype,self.spriteshot,self.team)
@@ -796,25 +793,26 @@ def play(): #main game loop
     global levelwait
     global lastkills
     global leveltimechange
+    global fpsmod
     #clearing or starting the variables used while playing
     main_menu_snd.fadeout(1000)#Fadeouts the main-menu music during 1 second
     main_menu_music = False
     pygame.mouse.set_visible(0)
     ost_snd.play(-1)
-    
     nowtime = pygame.time.get_ticks()
     prevtime = pygame.time.get_ticks()
     dtmod = 16 #16 is 1000/60, hence, the amount of miliseconds between one frame and another in 60fps
     player = ship(mousex,mousey,100,0,-10,10,'simple',15,playerImg,playershotImg,"green")
-    
+    fpsmod = 1
+    fpsClock.tick(FPS)
     player_shot_delay = 0 #Will be used at the game-loop in order to control the player rof
     player_rof = 15 #rate of fire, how many frames has to pass until the next shot is fired
     time_game_begun = pygame.time.get_ticks()
     time_game_finished = 0
     game_finish = 0
     boss_spawned = False
-    
     kills = 0
+    gamerun = False
     if gamemode == 'arcade':
         level = 1
     else:
@@ -876,6 +874,10 @@ def play(): #main game loop
         for explosion in explosions:
             explosion.cycle() #cicles the current explosions
         fpsClock.tick(FPS) #Ticks a single frame, serves as a time-controller
-
+        if gamerun == True:
+            fpsmod = (fpsClock.get_fps()/FPS)
+        else:
+            fpsmod = 1
+        gemerun = True
 while True: #so that even if the game ends,the player is taken back to the menu after.
     menu()
