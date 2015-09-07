@@ -121,12 +121,9 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
             self.direction_toggle = randint(0,1)#Controls the direction of spinning on whip shots
             
         if self.type == 'aimshot':#Defines a vector between the player and the position of the shot the moment it is created
-            self.vector = Vector2(player.rect.centerx-self.rect.centerx,player.rect.centery-self.rect.centery)
+            self.vector = Vector2(player.rect.bottomright[0]-self.rect.centerx,player.rect.bottomright[1]-self.rect.centery)
             self.angle = self.vector.as_polar()[1]#Then gets the angle of this vector by converting to polar coordinates
             self.radians = self.angle * pi/180#And finally converts it to radians so it may be used with the cos and sin functions
-
-            self.x = x
-            self.y = y
         if self.team == 'red':
             enemy_shots.add(self)
         else:
@@ -151,10 +148,8 @@ class shot(pygame.sprite.Sprite): #creates shot as an object, which ships will c
                 self.cont -= 0.1*fpsmod*(dt/dtmod)
                 
         elif self.type == 'aimshot':
-            self.x += self.spd*cos(self.radians)*fpsmod*(dt/dtmod)
-            self.rect.x = self.x
-            self.y += self.spd*sin(self.radians)*fpsmod*(dt/dtmod)
-            self.rect.y = self.y
+            self.rect.x += self.spd*cos(self.radians)*fpsmod*(dt/dtmod)
+            self.rect.y += self.spd*sin(self.radians)*fpsmod*(dt/dtmod)
             
         elif self.type == 'explosive':#Explosive sort of shot
             self.rect.y += self.spd*(dt/dtmod)*fpsmod
@@ -452,11 +447,10 @@ def drawexplosions():
     for explosion in explosions:
         DISPLAYSURF.blit(explosion.image, (explosion.rect.x, explosion.rect.y))
 
-def spawn():
+def spawn(level):
     """Controls where and when will the enemies appear"""
     time = pygame.time.get_ticks() + 30 #gets time after pygame.init was called, in ms
     global boss_spawned
-    global level
     global bigboss #bigboss has to be global so that bigboss.hp and .x/.y may be checked along the code
     if (time - time_game_begun) % (1000 + (1000*dif)) < dt: #spawn random mobs, from either left or right
         if randint(-1,1) == 1:
@@ -864,7 +858,7 @@ def play(): #main game loop
         draw()
         levelmechanics()#Controls the level mechanics
         if not boss_spawned and levelwait <= 0: #stops spawn if the boss has spawned or if the game is displaying the level
-            spawn()#passes the level to the spawn function
+            spawn(level)#passes the level to the spawn function
         for shipt in enemy_list:
             if shipt.hp < 1:
                 kills += 1
